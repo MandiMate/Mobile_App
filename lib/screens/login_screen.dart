@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/screens/singup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -9,24 +11,56 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-
-  // Password visibility toggle
   bool _isPasswordVisible = false;
 
-  // Handle login button press
-  void handleLogin() {
+  // LOGIN FUNCTION :
+  void handleLogin() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Entered Login Info"),
-            content: Text("Email: $email\nPassword: $password"),
+    if (email.isEmpty || password.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Please enter both email and password."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final url = Uri.parse('https://mandimatebackend.vercel.app/auth/signin');
+    final body = jsonEncode({
+      "email": email,
+      "password": password,
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData["status"] == 200) {
+        final token = responseData["token"];
+        final user = responseData["user"];
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Login Success"),
+            content: Text("✅ ${responseData["message"]}\n\nWelcome, ${user["userName"]}!"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -34,11 +68,43 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-    );
+        );
 
-    emailController.clear();
-    passwordController.clear();
-    // TODO: Backend API call yahan karni hai
+        // Clear inputs
+        emailController.clear();
+        passwordController.clear();
+
+        // TODO: Navigate to dashboard screen if needed and store token/user info
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Login Failed"),
+            content: Text(responseData["message"] ?? "Invalid credentials."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Connection Error"),
+          content: Text("Failed to connect to server.\n\nError: $e"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -62,13 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-
-                    // Logo
                     Image.asset('assets/Group.png', height: 90),
-
                     const SizedBox(height: 12),
-
-                    // Title
                     const Text(
                       'Welcome To MandiMate',
                       textAlign: TextAlign.center,
@@ -78,10 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF2D6A4F),
                       ),
                     ),
-
                     const SizedBox(height: 30),
-
-                    // Email Field
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -94,10 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Password Field with eye icon
                     TextField(
                       controller: passwordController,
                       obscureText: !_isPasswordVisible,
@@ -123,26 +178,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // Forgot Password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          // TODO: Navigate to forgot screen
-                        },
+                        onPressed: () {},
                         child: const Text(
                           'Forgot Password?',
                           style: TextStyle(color: Color(0xFF2D6A4F)),
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
-                    // Login Button
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -160,10 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Signup Prompt
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
