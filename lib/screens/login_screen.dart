@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
 import 'package:mandimate_mobile_app/screens/singup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,25 +25,23 @@ class _LoginScreenState extends State<LoginScreen> {
     if (email.isEmpty || password.isEmpty) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Error"),
-          content: const Text("Please enter both email and password."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
+        builder:
+            (context) => AlertDialog(
+              title: const Text("Error"),
+              content: const Text("Please enter both email and password."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ],
             ),
-          ],
-        ),
       );
       return;
     }
 
     final url = Uri.parse('https://mandimatebackend.vercel.app/auth/signin');
-    final body = jsonEncode({
-      "email": email,
-      "password": password,
-    });
+    final body = jsonEncode({"email": email, "password": password});
 
     try {
       final response = await http.post(
@@ -56,53 +56,53 @@ class _LoginScreenState extends State<LoginScreen> {
         final token = responseData["token"];
         final user = responseData["user"];
 
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Login Success"),
-            content: Text("✅ ${responseData["message"]}\n\nWelcome, ${user["userName"]}!"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
+        // Token & user data save in local storage
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("token", token);
+        await prefs.setString("user", jsonEncode(user));
 
         // Clear inputs
         emailController.clear();
         passwordController.clear();
 
+        // Navigate to Dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
         // TODO: Navigate to dashboard screen if needed and store token/user info
       } else {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Login Failed"),
-            content: Text(responseData["message"] ?? "Invalid credentials."),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
+          builder:
+              (context) => AlertDialog(
+                title: const Text("Login Failed"),
+                content: Text(
+                  responseData["message"] ?? "Invalid credentials.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("OK"),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
       }
     } catch (e) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Connection Error"),
-          content: Text("Failed to connect to server.\n\nError: $e"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
+        builder:
+            (context) => AlertDialog(
+              title: const Text("Connection Error"),
+              content: Text("Failed to connect to server.\n\nError: $e"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ],
             ),
-          ],
-        ),
       );
     }
   }
