@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mandimate_mobile_app/screens/addPurchase.dart';
+import 'package:mandimate_mobile_app/widgets/drawer.dart';
+import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SeasonOverviewScreen extends StatefulWidget {
@@ -16,6 +20,8 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
   bool _hasActiveSeason = false;
   Map<String, dynamic>? _season; // active season object
   bool _createModalShownOnce = false;
+  List<Map<String, dynamic>> _purchases = [];
+  bool _loadingPurchases = false;
 
   // --- Form controllers for Create Season modal (name required; date just for UI) ---
   final TextEditingController _seasonNameCtrl = TextEditingController();
@@ -98,6 +104,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
             _hasActiveSeason = active;
             _loading = false;
           });
+          await _fetchPurchasesForActiveSeason();
         }
 
         // Save seasonId locally if present
@@ -121,6 +128,39 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     } catch (e) {
       if (mounted) setState(() => _loading = false);
       _showSnack('Network error: $e');
+    }
+  }
+
+  Future<void> _fetchPurchasesForActiveSeason() async {
+    setState(() => _loadingPurchases = true);
+
+    try {
+      final token = await _getAuthToken(); // yeh already aapke code me hai
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse("https://mandimatebackend.vercel.app/purchase/active-season"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list = data["data"] as List<dynamic>? ?? [];
+        setState(() {
+          _purchases =
+              list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        });
+      } else {
+        final err = json.decode(response.body);
+        _showSnack(err["message"] ?? "Failed to fetch purchases");
+      }
+    } catch (e) {
+      _showSnack("Error fetching purchases: $e");
+    } finally {
+      setState(() => _loadingPurchases = false);
     }
   }
 
@@ -214,125 +254,6 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     );
   }
 
-  Drawer _buildDrawer() {
-    return Drawer(
-      backgroundColor: Colors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Branding bar (logo + title)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 34,
-                    child: Image.asset("assets/Group.png", fit: BoxFit.contain),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Mandi Mate",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.dashboard, color: Colors.green[700]),
-                    title: const Text("Dashboard"),
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.timeline, color: Colors.green[700]),
-                    title: const Text("Season Overview"),
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.people_alt, color: Colors.green[700]),
-                    title: const Text("Landlords"),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.agriculture, color: Colors.green[700]),
-                    title: const Text("Farmers"),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.settings, color: Colors.green[700]),
-                    title: const Text("Settings"),
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
-
-            // Fixed Logout
-            Container(
-              padding: const EdgeInsets.all(12),
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Logout
-                },
-                icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text(
-                  "Logout",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[700],
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Top heading + actions
   Widget _buildTopHeader() {
     return Column(
@@ -357,25 +278,30 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
                 onPressed:
                     _hasActiveSeason
                         ? () {
-                          // TODO: open Add Purchase form
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddPurchaseScreen(),
+                            ),
+                          );
                         }
                         : null,
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('Add Purchase'),
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.disabled)) {
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
                       return Colors.green.shade200;
                     }
                     return Colors.green.shade600;
                   }),
-                  foregroundColor: const MaterialStatePropertyAll<Color>(
+                  foregroundColor: const WidgetStatePropertyAll<Color>(
                     Colors.white,
                   ),
-                  padding: const MaterialStatePropertyAll(
+                  padding: const WidgetStatePropertyAll(
                     EdgeInsets.symmetric(vertical: 14),
                   ),
-                  shape: MaterialStatePropertyAll(
+                  shape: WidgetStatePropertyAll(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -395,19 +321,19 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
                 icon: const Icon(Icons.flag_circle),
                 label: const Text('End Season'),
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.disabled)) {
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
                       return Colors.red.shade200;
                     }
                     return Colors.redAccent;
                   }),
-                  foregroundColor: const MaterialStatePropertyAll<Color>(
+                  foregroundColor: const WidgetStatePropertyAll<Color>(
                     Colors.white,
                   ),
-                  padding: const MaterialStatePropertyAll(
+                  padding: const WidgetStatePropertyAll(
                     EdgeInsets.symmetric(vertical: 14),
                   ),
-                  shape: MaterialStatePropertyAll(
+                  shape: WidgetStatePropertyAll(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -421,55 +347,71 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
 
         // Season small info row (icon + name + date + filter)
         if (_hasActiveSeason && _season != null)
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 16,
-                backgroundColor: Color(0xFFEFF7EE),
-                child: Icon(Icons.eco, color: Colors.green, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _prettySeasonLine(_season!),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Color(0xFFEFF7EE),
+                  child: Icon(Icons.eco, color: Colors.green, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _season?['name']?.toString() ?? '—',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _season?['startDate'] != null
+                                ? _formatDate(
+                                  DateTime.parse(
+                                    _season!['startDate'].toString(),
+                                  ),
+                                )
+                                : 'No Start Date',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: open filter sheet
-                },
-                icon: const Icon(Icons.tune),
-                label: const Text('Filter'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
       ],
     );
-  }
-
-  static String _prettySeasonLine(Map<String, dynamic> s) {
-    final name = s['name']?.toString() ?? '—';
-    final start = DateTime.tryParse(s['startDate']?.toString() ?? '');
-    final end =
-        s['endDate'] == null
-            ? null
-            : DateTime.tryParse(s['endDate'].toString());
-    final startStr = start == null ? '—' : _formatDate(start);
-    final endStr = end == null ? 'Present' : _formatDate(end);
-    return '$name  ($startStr — $endStr)';
   }
 
   static String _formatDate(DateTime d) {
@@ -491,107 +433,132 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
   }
 
   // Create Season Modal (opens when no active season)
+
   void _openCreateSeasonModal() {
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
+      barrierDismissible: false,
+      barrierLabel: 'Season Modal',
+      barrierColor: Colors.black.withOpacity(
+        0.4,
+      ), // Semi-transparent background
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (ctx, anim1, anim2) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Background blur
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: MediaQuery.of(ctx).size.width * 0.85,
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-              ),
-              const Text(
-                'Start New Season',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _seasonNameCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Season Name',
-                  hintText: 'e.g. Winter 2025',
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Date is for UI only; not sent to backend
-              GestureDetector(
-                onTap: _pickDate,
-                child: AbsorbPointer(
-                  child: TextField(
-                    controller: _startDateCtrl,
-                    decoration: InputDecoration(
-                      labelText: 'Start Date (UI only)',
-                      hintText: 'Select date',
-                      suffixIcon: const Icon(Icons.calendar_today),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '🌿 Start New Season',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
                       ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _seasonNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Season Name',
+                        hintText: 'e.g. Winter 2025',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _onCreateSeasonPressed,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        backgroundColor: Colors.green[700],
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _pickDate,
+                      child: AbsorbPointer(
+                        child: TextField(
+                          controller: _startDateCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Start Date',
+                            hintText: 'Select date',
+                            suffixIcon: const Icon(Icons.calendar_today),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
                         ),
                       ),
-                      child: const Text('Create Season'),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _onCreateSeasonPressed,
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text(
+                              'Create',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              backgroundColor: Colors.green[700],
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+          child: child,
         );
       },
     );
@@ -641,7 +608,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: _buildAppBar(),
-      drawer: _buildDrawer(),
+      drawer: const CustomDrawer(),
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
@@ -658,7 +625,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
 
                       if (!_hasActiveSeason) _buildNoActiveSeasonBanner(),
 
-                      if (_hasActiveSeason) _buildActiveSeasonPlaceholderList(),
+                      if (_hasActiveSeason) _buildActiveSeasonPurchases(),
                     ],
                   ),
                 ),
@@ -702,147 +669,256 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     );
   }
 
-  // Placeholder list (we’ll replace with backend-driven purchases next step)
-  Widget _buildActiveSeasonPlaceholderList() {
+  Widget _buildActiveSeasonPurchases() {
+    if (_loadingPurchases) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_purchases.isEmpty) {
+      return const Text("No purchases found for this season");
+    }
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _purchaseCardSkeleton(
-          id: '00001',
-          product: 'Wheat',
-          qty: '32 TON',
-          rate: '24,000 / TON',
-          date: _season?['startDate']?.toString() ?? '',
-          farmer: 'Christine Brooks',
-          status: 'Completed',
-          statusColor: Colors.green[400]!,
-        ),
-        _purchaseCardSkeleton(
-          id: '00002',
-          product: 'Wheat',
-          qty: '32 TON',
-          rate: '24,000 / TON',
-          date: _season?['startDate']?.toString() ?? '',
-          farmer: 'Christine Brooks',
-          status: 'Processing',
-          statusColor: Colors.purple[300]!,
-        ),
-      ],
+      children: List.generate(_purchases.length, (index) {
+        final p = _purchases[index];
+        final String displayId = "000${index + 1}";
+        final String originalId = p["_id"];
+
+        return GestureDetector(
+          onTap: () async {
+            await _fetchPurchaseDetailAndOpenReceipt(originalId);
+          },
+          child: _purchaseCardExactUI(
+            id: displayId, // sirf display ke liye
+            productName: p["productName"] ?? '',
+            quantity: "${p["quantity"]} ${p["unit"]}",
+            rate: "${p["unitPrice"]} / ${p["unit"]}",
+            date: _formatDate(DateTime.parse(p["purchaseDate"])),
+            farmer: p["farmerId"]?["name"] ?? '',
+            landlord: p["landlordId"]?["name"] ?? '',
+            status: p["status"] ?? '',
+            onEdit: () => _editPurchase(originalId),
+            onDelete: () => _deletePurchase(originalId),
+          ),
+        );
+      }),
     );
   }
 
-  Widget _purchaseCardSkeleton({
-    required String id,
-    required String product,
-    required String qty,
+  // yeh function backend call karega
+
+Future<void> _fetchPurchaseDetailAndOpenReceipt(String purchaseId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token'); // yahan tumhara token key ka naam wahi hona chahiye jo save karte ho
+
+    if (token == null) {
+      _showErrorDialog("Authentication token missing. Please log in again.");
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse(
+        "https://mandimatebackend.vercel.app/purchase/purchase-detail/$purchaseId",
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final decodedResponse = json.decode(response.body);
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => ReceiptDialog(body: decodedResponse),
+    );
+  } catch (e) {
+    _showErrorDialog("Error: $e");
+    print(e);
+  }
+}
+
+
+
+  void _showErrorDialog(String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Error"),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _purchaseCardExactUI({
+    required String id, // dummy ya real ID
+    required String productName,
+    required String quantity,
     required String rate,
     required String date,
     required String farmer,
+    required String landlord,
     required String status,
-    required Color statusColor,
+    VoidCallback? onEdit,
+    VoidCallback? onDelete,
   }) {
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case "completed":
+        statusColor = Colors.green;
+        break;
+      case "processing":
+        statusColor = Colors.purple;
+        break;
+      case "pending":
+        statusColor = Colors.orange;
+        break;
+      case "cancelled":
+        statusColor = Colors.red;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+
+    // Capitalize first letter of status
+    String displayStatus =
+        status.isNotEmpty
+            ? "${status[0].toUpperCase()}${status.substring(1).toLowerCase()}"
+            : status;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEFEFEF)),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.check_box_outline_blank,
-                size: 18,
-                color: Colors.grey,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'ID  $id',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 20,
-                  color: Colors.redAccent,
-                ),
-                onPressed: () {},
-              ),
-            ],
-          ),
-          const Divider(height: 20),
-          _kv('Product Name', product),
-          _kv('Quantity', qty),
-          _kv('Rate', rate),
-          _kv('Date', _formatDate(DateTime.now())),
-          _kv('Farmer Name', farmer),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Status',
-                  style: TextStyle(
+          // Top Row: ID + Actions
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  id,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
                     color: Colors.grey,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  color: Colors.grey[600],
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: onEdit,
                 ),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+                const SizedBox(width: 2), // kam spacing
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: Colors.red[400],
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: onDelete,
                 ),
-                child: Text(
-                  status,
+              ],
+            ),
+          ),
+          Divider(height: 1, color: Colors.grey[300]),
+
+          // Details Rows
+          _detailRow("Product Name", productName),
+          _detailRow("Quantity", quantity),
+          _detailRow("Rate", rate),
+          _detailRow("Date", date),
+          _detailRow("Farmer Name", farmer),
+          _detailRow("Landlord Name", landlord),
+
+          // Status Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Payment Status",
                   style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
                   ),
                 ),
-              ),
-            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    displayStatus,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _kv(String k, String v) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              k,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.w700,
+  Widget _detailRow(String label, String value) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
               ),
-            ),
+              Flexible(
+                child: Text(
+                  value,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          Text(v, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
+        ),
+        Divider(height: 1, color: Colors.grey[300]),
+      ],
     );
   }
 
@@ -852,4 +928,14 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     _startDateCtrl.dispose();
     super.dispose();
   }
+}
+
+void _editPurchase(String purchaseId) {
+  print("Edit purchase $purchaseId");
+  // yahan tum edit screen open kar sakte ho
+}
+
+void _deletePurchase(String purchaseId) {
+  print("Delete purchase $purchaseId");
+  // yahan backend delete API call kar sakte ho
 }

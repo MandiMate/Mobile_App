@@ -90,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return; // widget abhi mounted hai ya nahi check karo
       showDialog(
         context: context,
         builder:
