@@ -66,7 +66,7 @@ class _SignupScreenState extends State<SignupScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text("Success"),
-            content: Text("✅ ${responseData["message"]}"),
+            content: Text("${responseData["message"]}"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),

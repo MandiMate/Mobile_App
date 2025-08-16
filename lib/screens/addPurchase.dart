@@ -33,17 +33,38 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   final TextEditingController paidController = TextEditingController();
 
   final List<String> productList = const [
-    'Tomato',
-    'Onion',
-    'Potato',
-    'Cabbage',
-    'Carrot',
-    'Peas',
-    'Spinach',
-    'Garlic',
-    'Ginger',
-    'Cucumber',
-    'Chili',
+    // Common Vegetables (Sabzian)
+    'Tomato (Tamatar)',
+    'Onion (Pyaz)',
+    'Potato (Aloo)',
+    'Cabbage (Band Gobi)',
+    'Carrot (Gajar)',
+    'Peas (Matar)',
+    'Spinach (Palak)',
+    'Garlic (Lahsan)',
+    'Ginger (Adrak)',
+    'Cucumber (Kheera)',
+    'Chili (Mirch)',
+    'Brinjal (Baigan)',
+    'Cauliflower (Phool Gobi)',
+    'Okra (Bhindi)',
+    'Bitter Gourd (Karela)',
+    'Bottle Gourd (Lauki)',
+    'Ridge Gourd (Tori)',
+    'Pumpkin (Kaddu)',
+    'Radish (Mooli)',
+    'Turnip (Shaljam)',
+    'Beetroot (Chukandar)',
+    'Lady Finger',
+    'Capsicum (Shimla Mirch)',
+    'Lettuce (Salad Patta)',
+    'Mint (Pudina)',
+    'Coriander (Dhaniya)',
+    'Mustard Greens (Sarson ka Saag)',
+    'Leek (Gandana)',
+    'Spring Onion',
+    'Sweet Potato (Shakarkand)',
+    'Tinda',
   ];
 
   List<Map<String, dynamic>> landlordList = [];
@@ -381,9 +402,20 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         label: 'Product',
         icon: Icons.local_grocery_store,
       ),
+      isExpanded: true, // Important for long text
+      menuMaxHeight: 300, // Maximum height for dropdown menu
       items:
           productList
-              .map((p) => DropdownMenuItem<String>(value: p, child: Text(p)))
+              .map(
+                (p) => DropdownMenuItem<String>(
+                  value: p,
+                  child: Text(
+                    p,
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis, // Handle long text
+                  ),
+                ),
+              )
               .toList(),
       onChanged: (val) => setState(() => selectedProduct = val),
       validator: (v) => v == null ? 'Required' : null,

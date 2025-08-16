@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:mandimate_mobile_app/screens/addPurchase.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class SeasonOverviewScreen extends StatefulWidget {
   const SeasonOverviewScreen({super.key});
@@ -47,6 +49,756 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _openCreateSeasonModal(),
       );
+    }
+  }
+
+  Future<void> _endSeasonWithConfirmation() async {
+    print('DEBUG: End season button clicked');
+
+    // Show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.orange[600],
+            size: 48,
+          ),
+          title: const Text(
+            'End Current Season?',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Are you sure you want to end the current season?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 16),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'End Season',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _endSeason();
+    }
+  }
+
+  Future<void> _endSeason() async {
+    print('DEBUG: _endSeason START');
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'Ending Season...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    try {
+      // Get token and seasonId from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final seasonId = prefs.getString('seasonId');
+
+      print('DEBUG: token exists: ${token != null}');
+      print('DEBUG: seasonId: $seasonId');
+
+      if (token == null || token.isEmpty) {
+        Navigator.of(context).pop(); // Close loading dialog
+        _showSnack('Auth token missing. Please login again.');
+        print('DEBUG: token missing -> return');
+        return;
+      }
+
+      if (seasonId == null || seasonId.isEmpty) {
+        Navigator.of(context).pop(); // Close loading dialog
+        _showSnack('Season ID not found. Please refresh and try again.');
+        print('DEBUG: seasonId missing -> return');
+        return;
+      }
+
+      // Make API call to close season
+      final uri = Uri.parse(
+        'https://mandimatebackend.vercel.app/season/close/$seasonId',
+      );
+
+      print('DEBUG: Making PATCH request to: $uri');
+
+      final response = await http
+          .patch(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('DEBUG: Season ended successfully');
+
+        // Show success message
+        _showSnack('Season ended successfully!');
+
+        // Clear seasonId from SharedPreferences
+        await prefs.remove('seasonId');
+
+        // Call bootstrap to refresh the app state
+        print('DEBUG: Calling _bootstrap() to refresh app state');
+        await _bootstrap();
+
+        print('DEBUG: _endSeason completed successfully');
+      } else {
+        // Handle error response
+        String errorMessage = 'Failed to end season (${response.statusCode})';
+
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData is Map && errorData['message'] != null) {
+            errorMessage = errorData['message'].toString();
+          }
+        } catch (_) {
+          // Use default error message if JSON parsing fails
+        }
+
+        _showSnack(errorMessage);
+        print('DEBUG: End season failed: $errorMessage');
+      }
+    } on TimeoutException {
+      Navigator.of(context).pop(); // Close loading dialog
+      _showSnack('Request timed out. Please try again.');
+      print('DEBUG: End season timeout');
+    } catch (e) {
+      Navigator.of(context).pop(); // Close loading dialog
+      _showSnack('Network error: $e');
+      print('DEBUG: End season network error: $e');
+    }
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildField(
+    String label,
+    TextEditingController controller, {
+    bool readOnly = false,
+    bool isNumber = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: TextField(
+              controller: controller,
+              readOnly: readOnly,
+              keyboardType:
+                  isNumber
+                      ? const TextInputType.numberWithOptions(decimal: true)
+                      : TextInputType.text,
+              inputFormatters:
+                  isNumber
+                      ? <TextInputFormatter>[
+                        // allows digits and dot (simple). For integer-only use FilteringTextInputFormatter.digitsOnly
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                      ]
+                      : null,
+              decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _openEditPurchaseModal(String purchaseId) async {
+    print('DEBUG: _openEditPurchaseModal START for $purchaseId');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null) {
+      _showSnack('Auth token missing. Please login again.');
+      print('DEBUG: token missing -> returning false');
+      return false;
+    }
+
+    Map<String, dynamic>? purchase;
+    try {
+      final resp = await http
+          .get(
+            Uri.parse(
+              'https://mandimatebackend.vercel.app/purchase/purchase-detail/$purchaseId',
+            ),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print('DEBUG: fetch detail status ${resp.statusCode}');
+      if (resp.statusCode != 200) {
+        _showSnack('Failed to fetch purchase details (${resp.statusCode}).');
+        print('DEBUG: fetch failed -> returning false');
+        return false;
+      }
+
+      final decoded = json.decode(resp.body) as Map<String, dynamic>;
+      purchase = decoded['data'] as Map<String, dynamic>?;
+      if (purchase == null) {
+        _showSnack('Purchase data missing in response.');
+        print('DEBUG: purchase null -> returning false');
+        return false;
+      }
+    } catch (e) {
+      _showSnack('Network error: $e');
+      print('DEBUG: network error $e -> returning false');
+      return false;
+    }
+
+    if (!mounted) {
+      print('DEBUG: not mounted -> returning false');
+      return false;
+    }
+
+    // controllers
+    final productCtrl = TextEditingController(
+      text: purchase['productName']?.toString() ?? '',
+    );
+    final qtyCtrl = TextEditingController(
+      text: purchase['quantity']?.toString() ?? '',
+    );
+    final unitCtrl = TextEditingController(
+      text: purchase['unit']?.toString() ?? '',
+    );
+    final unitPriceCtrl = TextEditingController(
+      text: purchase['unitPrice']?.toString() ?? '',
+    );
+    final expenseCtrl = TextEditingController(
+      text: purchase['expense']?.toString() ?? '',
+    );
+    final advanceCtrl = TextEditingController(
+      text: purchase['advance']?.toString() ?? '',
+    );
+    final paidCtrl = TextEditingController(
+      text: purchase['paidToFarmer']?.toString() ?? '',
+    );
+    final landlordCtrl = TextEditingController(
+      text: purchase['landlordId']?['name']?.toString() ?? '',
+    );
+    final farmerCtrl = TextEditingController(
+      text: purchase['farmerId']?['name']?.toString() ?? '',
+    );
+
+    // Use a Completer to properly handle the result
+    final Completer<bool> completer = Completer<bool>();
+
+    // Change the return type to bool only
+    final bool? dialogResult = await showGeneralDialog<bool>(
+      context: context, // Use original context directly
+      barrierDismissible: false,
+      barrierLabel: 'Edit Purchase',
+      barrierColor: Colors.black.withOpacity(0.4),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, a1, a2) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+          child: Center(
+            child: StatefulBuilder(
+              builder: (dialogCtx, setInnerState) {
+                bool isSaving = false;
+
+                void stopSaving() {
+                  if (mounted) {
+                    try {
+                      setInnerState(() => isSaving = false);
+                    } catch (_) {}
+                  }
+                }
+
+                return Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: MediaQuery.of(dialogCtx).size.width * 0.92,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Edit Purchase',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  print(
+                                    'DEBUG: close icon pressed -> pop(false)',
+                                  );
+                                  Navigator.of(dialogCtx).pop(false);
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          _buildField('Product Name', productCtrl),
+                          _buildField('Landlord', landlordCtrl, readOnly: true),
+                          _buildField('Farmer', farmerCtrl, readOnly: true),
+                          _buildField('Quantity', qtyCtrl, isNumber: true),
+                          _buildField('Unit', unitCtrl),
+                          _buildField(
+                            'Unit Price',
+                            unitPriceCtrl,
+                            isNumber: true,
+                          ),
+                          _buildField('Expense', expenseCtrl, isNumber: true),
+                          _buildField('Advance', advanceCtrl, isNumber: true),
+                          _buildField(
+                            'Paid to Farmer',
+                            paidCtrl,
+                            isNumber: true,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    print(
+                                      'DEBUG: Cancel pressed -> pop(false)',
+                                    );
+                                    Navigator.of(dialogCtx).pop(false);
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: Colors.grey[300]!),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: const Size.fromHeight(48),
+                                  ),
+                                  child: const Text('Cancel'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed:
+                                      isSaving
+                                          ? null
+                                          : () async {
+                                            print(
+                                              'DEBUG: Update pressed -> starting save',
+                                            );
+                                            setInnerState(
+                                              () => isSaving = true,
+                                            );
+
+                                            final body = {
+                                              'productName':
+                                                  productCtrl.text.trim(),
+                                              'quantity':
+                                                  int.tryParse(
+                                                    qtyCtrl.text.trim(),
+                                                  ) ??
+                                                  0,
+                                              'unit': unitCtrl.text.trim(),
+                                              'unitPrice':
+                                                  double.tryParse(
+                                                    unitPriceCtrl.text.trim(),
+                                                  ) ??
+                                                  0.0,
+                                              'expense':
+                                                  double.tryParse(
+                                                    expenseCtrl.text.trim(),
+                                                  ) ??
+                                                  0.0,
+                                              'advance':
+                                                  double.tryParse(
+                                                    advanceCtrl.text.trim(),
+                                                  ) ??
+                                                  0.0,
+                                              'paidToFarmer':
+                                                  double.tryParse(
+                                                    paidCtrl.text.trim(),
+                                                  ) ??
+                                                  0.0,
+                                            };
+
+                                            try {
+                                              final prefs2 =
+                                                  await SharedPreferences.getInstance();
+                                              final token2 = prefs2.getString(
+                                                'token',
+                                              );
+                                              if (token2 == null ||
+                                                  token2.isEmpty) {
+                                                stopSaving();
+                                                _showSnack(
+                                                  'Auth token missing. Please login again.',
+                                                );
+                                                print(
+                                                  'DEBUG: token2 missing -> return',
+                                                );
+                                                return;
+                                              }
+
+                                              final uri = Uri.parse(
+                                                'https://mandimatebackend.vercel.app/purchase/update/$purchaseId',
+                                              );
+
+                                              final updateResp = await http
+                                                  .put(
+                                                    uri,
+                                                    headers: {
+                                                      'Content-Type':
+                                                          'application/json',
+                                                      'Authorization':
+                                                          'Bearer $token2',
+                                                    },
+                                                    body: json.encode(body),
+                                                  )
+                                                  .timeout(
+                                                    const Duration(seconds: 20),
+                                                  );
+
+                                              print(
+                                                'DEBUG: updateResp status ${updateResp.statusCode}, body: ${updateResp.body}',
+                                              );
+
+                                              if (updateResp.statusCode ==
+                                                      200 ||
+                                                  updateResp.statusCode ==
+                                                      201) {
+                                                print(
+                                                  'DEBUG: update success -> closing dialog with true',
+                                                );
+
+                                                // Stop loading state first
+                                                stopSaving();
+
+                                                // Add a small delay to ensure UI updates
+                                                await Future.delayed(
+                                                  const Duration(
+                                                    milliseconds: 100,
+                                                  ),
+                                                );
+
+                                                // Close dialog with success result
+                                                if (Navigator.of(
+                                                  dialogCtx,
+                                                ).canPop()) {
+                                                  Navigator.of(
+                                                    dialogCtx,
+                                                  ).pop(true);
+                                                }
+                                              } else {
+                                                stopSaving();
+                                                String msg =
+                                                    'Failed to update (${updateResp.statusCode})';
+                                                try {
+                                                  final err = json.decode(
+                                                    updateResp.body,
+                                                  );
+                                                  if (err is Map &&
+                                                      err['message'] != null) {
+                                                    msg =
+                                                        err['message']
+                                                            .toString();
+                                                  }
+                                                } catch (_) {}
+                                                _showSnack(msg);
+                                                print(
+                                                  'DEBUG: update failed -> $msg',
+                                                );
+                                              }
+                                            } on TimeoutException {
+                                              stopSaving();
+                                              _showSnack(
+                                                'Request timed out. Try again.',
+                                              );
+                                              print('DEBUG: update timeout');
+                                            } catch (e) {
+                                              stopSaving();
+                                              _showSnack('Network error: $e');
+                                              print(
+                                                'DEBUG: update network error $e',
+                                              );
+                                            }
+                                          },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green[700],
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    minimumSize: const Size.fromHeight(48),
+                                  ),
+                                  child:
+                                      isSaving
+                                          ? const SizedBox(
+                                            height: 18,
+                                            width: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                          : const Text('Update'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+          child: child,
+        );
+      },
+    );
+
+    // dispose controllers
+    productCtrl.dispose();
+    qtyCtrl.dispose();
+    unitCtrl.dispose();
+    unitPriceCtrl.dispose();
+    expenseCtrl.dispose();
+    advanceCtrl.dispose();
+    paidCtrl.dispose();
+    landlordCtrl.dispose();
+    farmerCtrl.dispose();
+
+    print('DEBUG: dialogResult = $dialogResult');
+
+    // Return the boolean result directly
+    return dialogResult == true;
+  }
+
+  Future<void> _deletePurchase(String purchaseId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // outside click se band na ho
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: Colors.white.withOpacity(0.95),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_forever_rounded,
+                    color: Colors.red[600],
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Title
+                const Text(
+                  "Delete Purchase?",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Description
+                const Text(
+                  "Are you sure you want to delete this purchase?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: Colors.black87),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey[400]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(dialogCtx, false),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(dialogCtx, true),
+                        child: const Text("Delete"),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.delete(
+        Uri.parse(
+          "https://mandimatebackend.vercel.app/purchase/delete/$purchaseId",
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        _toast("Purchase deleted successfully");
+        setState(() {
+          _purchases.removeWhere((p) => p["_id"] == purchaseId);
+        });
+      } else {
+        _toast("Failed to delete purchase");
+      }
+    } catch (e) {
+      _toast("Error: $e");
     }
   }
 
@@ -132,35 +884,76 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
   }
 
   Future<void> _fetchPurchasesForActiveSeason() async {
-    setState(() => _loadingPurchases = true);
+    print('DEBUG: _fetchPurchasesForActiveSeason START');
+
+    if (!mounted) {
+      print('DEBUG: Widget not mounted, returning');
+      return;
+    }
+
+    setState(() {
+      _loadingPurchases = true;
+      print('DEBUG: Loading state set to true');
+    });
 
     try {
-      final token = await _getAuthToken(); // yeh already aapke code me hai
-      if (token == null) return;
+      final token = await _getAuthToken();
+      if (token == null) {
+        print('DEBUG: Token null, returning');
+        if (mounted) setState(() => _loadingPurchases = false);
+        return;
+      }
 
-      final response = await http.get(
-        Uri.parse("https://mandimatebackend.vercel.app/purchase/active-season"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
+      print('DEBUG: Making API call with timeout');
+
+      final response = await http
+          .get(
+            Uri.parse(
+              "https://mandimatebackend.vercel.app/purchase/active-season",
+            ),
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+          )
+          .timeout(
+            Duration(seconds: 8), // Shorter timeout
+            onTimeout: () {
+              print('DEBUG: API call timed out');
+              throw TimeoutException('Request timed out', Duration(seconds: 8));
+            },
+          );
+
+      print('DEBUG: API response received, status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list = data["data"] as List<dynamic>? ?? [];
-        setState(() {
-          _purchases =
-              list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        });
+
+        if (mounted) {
+          setState(() {
+            _purchases =
+                list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+            print('DEBUG: Purchases updated, count: ${_purchases.length}');
+          });
+        }
       } else {
+        print('DEBUG: API error status: ${response.statusCode}');
         final err = json.decode(response.body);
-        _showSnack(err["message"] ?? "Failed to fetch purchases");
+        if (mounted) _showSnack(err["message"] ?? "Failed to fetch purchases");
       }
+    } on TimeoutException {
+      print('DEBUG: Timeout exception caught');
+      if (mounted) _showSnack("Request timed out. Please try again.");
     } catch (e) {
-      _showSnack("Error fetching purchases: $e");
+      print('DEBUG: Exception in _fetchPurchasesForActiveSeason: $e');
+      if (mounted) _showSnack("Error fetching purchases: $e");
     } finally {
-      setState(() => _loadingPurchases = false);
+      print('DEBUG: Setting loading to false');
+      if (mounted) {
+        setState(() => _loadingPurchases = false);
+      }
+      print('DEBUG: _fetchPurchasesForActiveSeason END');
     }
   }
 
@@ -312,12 +1105,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: FilledButton.icon(
-                onPressed:
-                    _hasActiveSeason
-                        ? () {
-                          // TODO: end season confirmation + API
-                        }
-                        : null,
+                onPressed: _hasActiveSeason ? _endSeasonWithConfirmation : null,
                 icon: const Icon(Icons.flag_circle),
                 label: const Text('End Season'),
                 style: ButtonStyle(
@@ -697,7 +1485,20 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
             farmer: p["farmerId"]?["name"] ?? '',
             landlord: p["landlordId"]?["name"] ?? '',
             status: p["status"] ?? '',
-            onEdit: () => _editPurchase(originalId),
+            onEdit: () async {
+              print('DEBUG: Edit button pressed for $originalId');
+
+              final updated = await _openEditPurchaseModal(originalId);
+
+              if (updated == true) {
+                print('DEBUG: Update successful, refreshing single item...');
+
+                _showSnack('Purchase updated successfully!');
+
+                // Option 1: Full refresh (recommended for data consistency)
+                await _fetchPurchasesForActiveSeason();
+              }
+            },
             onDelete: () => _deletePurchase(originalId),
           ),
         );
@@ -707,40 +1508,40 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
 
   // yeh function backend call karega
 
-Future<void> _fetchPurchaseDetailAndOpenReceipt(String purchaseId) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token'); // yahan tumhara token key ka naam wahi hona chahiye jo save karte ho
+  Future<void> _fetchPurchaseDetailAndOpenReceipt(String purchaseId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(
+        'token',
+      ); // yahan tumhara token key ka naam wahi hona chahiye jo save karte ho
 
-    if (token == null) {
-      _showErrorDialog("Authentication token missing. Please log in again.");
-      return;
+      if (token == null) {
+        _showErrorDialog("Authentication token missing. Please log in again.");
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(
+          "https://mandimatebackend.vercel.app/purchase/purchase-detail/$purchaseId",
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final decodedResponse = json.decode(response.body);
+
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => ReceiptDialog(body: decodedResponse),
+      );
+    } catch (e) {
+      _showErrorDialog("Error: $e");
+      print(e);
     }
-
-    final response = await http.get(
-      Uri.parse(
-        "https://mandimatebackend.vercel.app/purchase/purchase-detail/$purchaseId",
-      ),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    final decodedResponse = json.decode(response.body);
-
-    if (!mounted) return;
-    await showDialog(
-      context: context,
-      builder: (ctx) => ReceiptDialog(body: decodedResponse),
-    );
-  } catch (e) {
-    _showErrorDialog("Error: $e");
-    print(e);
   }
-}
-
-
 
   void _showErrorDialog(String message) {
     if (!mounted) return;
@@ -928,14 +1729,4 @@ Future<void> _fetchPurchaseDetailAndOpenReceipt(String purchaseId) async {
     _startDateCtrl.dispose();
     super.dispose();
   }
-}
-
-void _editPurchase(String purchaseId) {
-  print("Edit purchase $purchaseId");
-  // yahan tum edit screen open kar sakte ho
-}
-
-void _deletePurchase(String purchaseId) {
-  print("Delete purchase $purchaseId");
-  // yahan backend delete API call kar sakte ho
 }
