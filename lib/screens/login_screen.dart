@@ -17,6 +17,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus(); // check if token exists
+  }
+
+  // Check token in local storage
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    if (token != null && token.isNotEmpty) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    }
+  }
+
   // LOGIN FUNCTION :
   void handleLogin() async {
     final email = emailController.text.trim();
@@ -25,17 +45,16 @@ class _LoginScreenState extends State<LoginScreen> {
     if (email.isEmpty || password.isEmpty) {
       showDialog(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text("Error"),
-              content: const Text("Please enter both email and password."),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("OK"),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Please enter both email and password."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
             ),
+          ],
+        ),
       );
       return;
     }
@@ -70,40 +89,37 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
-        // TODO: Navigate to dashboard screen if needed and store token/user info
       } else {
         showDialog(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text("Login Failed"),
-                content: Text(
-                  responseData["message"] ?? "Invalid credentials.",
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("OK"),
-                  ),
-                ],
+          builder: (context) => AlertDialog(
+            title: const Text("Login Failed"),
+            content: Text(
+              responseData["message"] ?? "Invalid credentials.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
               ),
+            ],
+          ),
         );
       }
     } catch (e) {
-      if (!mounted) return; // widget abhi mounted hai ya nahi check karo
+      if (!mounted) return;
       showDialog(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text("Connection Error"),
-              content: Text("Failed to connect to server.\n\nError: $e"),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("OK"),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text("Connection Error"),
+          content: Text("Failed to connect to server.\n\nError: $e"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
             ),
+          ],
+        ),
       );
     }
   }
