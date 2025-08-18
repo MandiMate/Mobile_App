@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
+import 'package:mandimate_mobile_app/screens/login_screen.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';   
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -122,8 +124,15 @@ class CustomDrawer extends StatelessWidget {
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Logout Logic
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear(); //  local storage clear
+
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (Route<dynamic> route) => false, //  all screens clear
+                  );
                 },
                 icon: const Icon(Icons.logout, color: Colors.white),
                 label: const Text(
