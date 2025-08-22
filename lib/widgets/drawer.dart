@@ -126,7 +126,7 @@ class CustomDrawer extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.clear(); //  local storage clear
+                  await prefs.remove("token"); //  local storage clear
 
                   Navigator.pushAndRemoveUntil(
                     context,
