@@ -154,7 +154,7 @@ class _LandlordPageState extends State<LandlordPage> {
       drawer: const CustomDrawer(), // ✅ your drawer widget
 
       body: RefreshIndicator(
-        onRefresh: fetchLandlords, 
+        onRefresh: fetchLandlords,
         child:
             isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -195,8 +195,12 @@ class _LandlordPageState extends State<LandlordPage> {
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: showAddLandlordDialog,
-        label: const Text("Add Landlord"),
-        icon: const Icon(Icons.add),
+        label: const Text(
+          "Add Landlord",
+          style: TextStyle(color: Colors.white),
+        ),
+        icon: const Icon(Icons.add, color: Colors.white),
+
         backgroundColor: Colors.green,
       ),
     );
