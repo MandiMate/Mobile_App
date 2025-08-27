@@ -294,11 +294,8 @@ class _LandlordPageState extends State<LandlordPage> {
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: showAddLandlordDialog,
-        label: const Text(
-          "Add Landlord",
-          style: TextStyle(color: Colors.white), // White text
-        ),
-        icon: const Icon(Icons.add, color: Colors.white), // White icon
+        label: const Text("Add Landlord"),
+        icon: const Icon(Icons.add),
         backgroundColor: Colors.green,
       ),
     );
