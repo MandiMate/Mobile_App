@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LandlordPage extends StatefulWidget {
   const LandlordPage({super.key});
@@ -14,10 +15,6 @@ class _LandlordPageState extends State<LandlordPage> {
   List landlords = [];
   bool isLoading = false;
 
-  final String apiUrl = "https://mandimatebackend.vercel.app/landlord/";
-  final String createUrl =
-      "https://mandimatebackend.vercel.app/landlord/create";
-
   @override
   void initState() {
     super.initState();
@@ -28,13 +25,18 @@ class _LandlordPageState extends State<LandlordPage> {
   Future<void> fetchLandlords() async {
     setState(() => isLoading = true);
     try {
-      final response = await http.get(Uri.parse(apiUrl));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          landlords = data["data"];
-        });
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Auth token missing. Please login again."),
+          ),
+        );
+        return;
       }
+
     } catch (e) {
       debugPrint("Error fetching landlords: $e");
     }
@@ -44,29 +46,18 @@ class _LandlordPageState extends State<LandlordPage> {
   /// Add new landlord
   Future<void> addLandlord(String name, String phone, String address) async {
     try {
-      final response = await http.post(
-        Uri.parse(createUrl),
-        headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          "name": name,
-          "phone": phone,
-          "address": address,
-          // TODO: Add agentId here if backend requires it
-        }),
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        fetchLandlords(); // Refresh list
-        Navigator.pop(context); // Close dialog
+      if (token == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Landlord added successfully")),
+          const SnackBar(
+            content: Text("Auth token missing. Please login again."),
+          ),
         );
-      } else {
-        debugPrint("Response: ${response.body}");
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Failed to add landlord")));
+        return;
       }
+
     } catch (e) {
       debugPrint("Error adding landlord: $e");
     }
@@ -91,16 +82,36 @@ class _LandlordPageState extends State<LandlordPage> {
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(labelText: "Name"),
+                    decoration: InputDecoration(
+                      labelText: "Name",
+                      prefixIcon: const Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: phoneController,
-                    decoration: const InputDecoration(labelText: "Phone"),
+                    decoration: InputDecoration(
+                      labelText: "Phone",
+                      prefixIcon: const Icon(Icons.phone),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     keyboardType: TextInputType.phone,
                   ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: addressController,
-                    decoration: const InputDecoration(labelText: "Address"),
+                    decoration: InputDecoration(
+                      labelText: "Address",
+                      prefixIcon: const Icon(Icons.home),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -111,6 +122,13 @@ class _LandlordPageState extends State<LandlordPage> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: () {
                   if (nameController.text.isNotEmpty &&
                       phoneController.text.isNotEmpty &&
@@ -127,6 +145,69 @@ class _LandlordPageState extends State<LandlordPage> {
             ],
           ),
     );
+  }
+
+  /// Confirm Delete Dialog
+  void confirmDelete(String landlordId) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              "Delete Landlord",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              "Are you sure you want to delete this landlord? This action cannot be undone.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog before deleting
+                  deleteLandlord(landlordId);
+                },
+                child: const Text("Delete"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  /// Delete Landlord API
+  Future<void> deleteLandlord(String landlordId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Auth token missing. Please login again."),
+          ),
+        );
+        return;
+      }
+
+    } catch (e) {
+      debugPrint("Error deleting landlord: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error occurred while deleting landlord")),
+      );
+    }
   }
 
   @override
@@ -151,10 +232,10 @@ class _LandlordPageState extends State<LandlordPage> {
           ),
         ),
       ),
-      drawer: const CustomDrawer(), // ✅ your drawer widget
+      drawer: const CustomDrawer(), // your drawer widget
 
       body: RefreshIndicator(
-        onRefresh: fetchLandlords, 
+        onRefresh: fetchLandlords,
         child:
             isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -166,14 +247,22 @@ class _LandlordPageState extends State<LandlordPage> {
                   itemBuilder: (context, index) {
                     final landlord = landlords[index];
                     return Card(
+                      color: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      elevation: 3,
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 4,
+                      ),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 16,
+                        ),
                         leading: CircleAvatar(
-                          backgroundColor: Colors.green.shade200,
+                          backgroundColor: Colors.green.shade100,
                           child: const Icon(Icons.person, color: Colors.black),
                         ),
                         title: Text(
@@ -183,10 +272,20 @@ class _LandlordPageState extends State<LandlordPage> {
                             fontSize: 16,
                           ),
                         ),
-                        subtitle: Text(
-                          "${landlord["phone"]}\n${landlord["address"]}",
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(landlord["phone"]),
+                            Text(landlord["address"]),
+                          ],
                         ),
-                        isThreeLine: true,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed:
+                              () => confirmDelete(
+                                landlord["_id"],
+                              ), // confirm dialog
+                        ),
                       ),
                     );
                   },
@@ -195,8 +294,11 @@ class _LandlordPageState extends State<LandlordPage> {
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: showAddLandlordDialog,
-        label: const Text("Add Landlord"),
-        icon: const Icon(Icons.add),
+        label: const Text(
+          "Add Landlord",
+          style: TextStyle(color: Colors.white), // White text
+        ),
+        icon: const Icon(Icons.add, color: Colors.white), // White icon
         backgroundColor: Colors.green,
       ),
     );
