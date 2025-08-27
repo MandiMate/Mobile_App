@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
+import 'package:mandimate_mobile_app/screens/landlord_screen.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
-import 'package:mandimate_mobile_app/screens/login_screen.dart'; 
-import 'package:shared_preferences/shared_preferences.dart';   
+import 'package:mandimate_mobile_app/screens/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -92,7 +93,14 @@ class CustomDrawer extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.people_alt),
                       title: const Text("Landlord"),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LandlordPage(),
+                          ),
+                        );
+                      },
                     ),
                     ListTile(
                       leading: const Icon(Icons.agriculture),
@@ -130,7 +138,9 @@ class CustomDrawer extends StatelessWidget {
 
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
                     (Route<dynamic> route) => false, //  all screens clear
                   );
                 },
