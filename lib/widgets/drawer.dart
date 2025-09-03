@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
+import 'package:mandimate_mobile_app/screens/farmer_screen.dart';
 import 'package:mandimate_mobile_app/screens/landlord_screen.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
 import 'package:mandimate_mobile_app/screens/login_screen.dart';
@@ -105,7 +106,14 @@ class CustomDrawer extends StatelessWidget {
                     ListTile(
                       leading: const Icon(Icons.agriculture),
                       title: const Text("Farmer"),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FarmerScreen(),
+                          ),
+                        );
+                      },
                     ),
                     ListTile(
                       leading: Icon(Icons.settings, color: Colors.green[700]),
