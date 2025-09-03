@@ -60,9 +60,20 @@ class _FarmerScreenState extends State<FarmerScreen> {
     }
   }
 
-  // Add Farmer
-  Future<void> addFarmer(String name, String phone, String address) async {
+  // Add Farmer - Fixed version
+  Future<void> addFarmer(
+    String name,
+    String phone,
+    String address,
+    String landlordId,
+  ) async {
     final token = await getToken();
+
+    print("=== ADD FARMER DEBUG ===");
+    print("Name: $name");
+    print("Phone: $phone");
+    print("Address: $address");
+    print("Landlord ID: $landlordId");
 
     final response = await http.post(
       Uri.parse("https://mandimatebackend.vercel.app/farmer/create"),
@@ -74,9 +85,12 @@ class _FarmerScreenState extends State<FarmerScreen> {
         "name": name,
         "phone": phone,
         "address": address,
-        "landlordId": selectedLandlordId,
+        "landlordId": landlordId, // Pass landlordId directly
       }),
     );
+
+    print("Add Response Status: ${response.statusCode}");
+    print("Add Response Body: ${response.body}");
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       Navigator.pop(context);
@@ -85,22 +99,30 @@ class _FarmerScreenState extends State<FarmerScreen> {
         const SnackBar(content: Text("Farmer added successfully")),
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to add farmer")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to add farmer: ${response.body}")),
+      );
     }
   }
 
-  // Update Farmer
+  // Update Farmer - Fixed version
   Future<void> updateFarmer(
     String id,
     String name,
     String phone,
     String address,
+    String landlordId,
   ) async {
     final token = await getToken();
 
-    final response = await http.put(
+    print("=== UPDATE FARMER DEBUG ===");
+    print("ID: $id");
+    print("Name: $name");
+    print("Phone: $phone");
+    print("Address: $address");
+    print("Landlord ID: $landlordId");
+
+    final response = await http.patch(
       Uri.parse("https://mandimatebackend.vercel.app/farmer/update/$id"),
       headers: {
         "Authorization": "Bearer $token",
@@ -110,9 +132,12 @@ class _FarmerScreenState extends State<FarmerScreen> {
         "name": name,
         "phone": phone,
         "address": address,
-        "landlordId": selectedLandlordId,
+        "landlordId": landlordId, // Pass landlordId directly
       }),
     );
+
+    print("Update Response Status: ${response.statusCode}");
+    print("Update Response Body: ${response.body}");
 
     if (response.statusCode == 200) {
       Navigator.pop(context);
@@ -121,9 +146,9 @@ class _FarmerScreenState extends State<FarmerScreen> {
         const SnackBar(content: Text("Farmer updated successfully")),
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to update farmer")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update farmer: ${response.body}")),
+      );
     }
   }
 
@@ -148,92 +173,139 @@ class _FarmerScreenState extends State<FarmerScreen> {
     }
   }
 
-  // Show Add/Edit Farmer Dialog
+  // Helper function to get landlord name by ID
+  String getLandlordName(String landlordId) {
+    final landlord = landlords.firstWhere(
+      (l) => l["_id"] == landlordId,
+      orElse: () => {"name": "Unknown Landlord"},
+    );
+    return landlord["name"];
+  }
+
+  // Helper function to get landlord name from populated data
+  String getLandlordNameFromPopulated(dynamic landlordData) {
+    if (landlordData is Map && landlordData.containsKey("name")) {
+      return landlordData["name"];
+    } else if (landlordData is String) {
+      return getLandlordName(landlordData);
+    }
+    return "Unknown Landlord";
+  }
+
+  // Fixed Dialog - separate landlordId for dialog state
   void showFarmerDialog({
     String? id,
     String? name,
     String? phone,
     String? address,
+    String? existingLandlordId,
   }) {
     final nameController = TextEditingController(text: name ?? "");
     final phoneController = TextEditingController(text: phone ?? "");
     final addressController = TextEditingController(text: address ?? "");
 
+    // Use local variable instead of global selectedLandlordId
+    String? dialogLandlordId = existingLandlordId;
+
+    print("=== DIALOG OPEN DEBUG ===");
+    print("Edit Mode: ${id != null}");
+    print("Initial Landlord ID: $dialogLandlordId");
+
     showDialog(
       context: context,
       builder: (_) {
-        return AlertDialog(
-          title: Text(id == null ? "Add Farmer" : "Edit Farmer"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: "Farmer Name"),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(id == null ? "Add Farmer" : "Edit Farmer"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: "Farmer Name",
+                      ),
+                    ),
+                    TextField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(
+                        labelText: "Phone Number",
+                      ),
+                    ),
+                    TextField(
+                      controller: addressController,
+                      decoration: const InputDecoration(labelText: "Address"),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: dialogLandlordId,
+                      hint: const Text("Select Landlord"),
+                      items:
+                          landlords.map<DropdownMenuItem<String>>((landlord) {
+                            return DropdownMenuItem<String>(
+                              value: landlord["_id"],
+                              child: Text(landlord["name"]),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        print("Dropdown changed to: $value");
+                        setDialogState(() {
+                          dialogLandlordId = value;
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(labelText: "Phone Number"),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
                 ),
-                TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(labelText: "Address"),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: selectedLandlordId,
-                  hint: const Text("Select Landlord"),
-                  items:
-                      landlords.map<DropdownMenuItem<String>>((landlord) {
-                        return DropdownMenuItem<String>(
-                          value: landlord["_id"],
-                          child: Text(landlord["name"]),
+                ElevatedButton(
+                  onPressed: () {
+                    print("=== FORM SUBMIT DEBUG ===");
+                    print("Name: '${nameController.text}'");
+                    print("Phone: '${phoneController.text}'");
+                    print("Address: '${addressController.text}'");
+                    print("Dialog Landlord ID: '$dialogLandlordId'");
+
+                    if (nameController.text.isNotEmpty &&
+                        phoneController.text.isNotEmpty &&
+                        addressController.text.isNotEmpty &&
+                        dialogLandlordId != null) {
+                      if (id == null) {
+                        // ADD: Pass landlordId as parameter
+                        addFarmer(
+                          nameController.text,
+                          phoneController.text,
+                          addressController.text,
+                          dialogLandlordId!, // Pass landlordId directly
                         );
-                      }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedLandlordId = value;
-                    });
+                      } else {
+                        // UPDATE: Pass landlordId as parameter
+                        updateFarmer(
+                          id,
+                          nameController.text,
+                          phoneController.text,
+                          addressController.text,
+                          dialogLandlordId!, // Pass landlordId directly
+                        );
+                      }
+                    } else {
+                      print("Validation failed - missing fields");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Please fill all fields")),
+                      );
+                    }
                   },
+                  child: Text(id == null ? "Add" : "Update"),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty &&
-                    phoneController.text.isNotEmpty &&
-                    addressController.text.isNotEmpty &&
-                    selectedLandlordId != null) {
-                  if (id == null) {
-                    addFarmer(
-                      nameController.text,
-                      phoneController.text,
-                      addressController.text,
-                    );
-                  } else {
-                    updateFarmer(
-                      id,
-                      nameController.text,
-                      phoneController.text,
-                      addressController.text,
-                    );
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please fill all fields")),
-                  );
-                }
-              },
-              child: Text(id == null ? "Add" : "Update"),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -291,7 +363,9 @@ class _FarmerScreenState extends State<FarmerScreen> {
                         children: [
                           Text("Phone: ${farmer["phone"]}"),
                           Text("Address: ${farmer["address"]}"),
-                          Text("Landlord ID: ${farmer["landlordId"]}"),
+                          Text(
+                            "Landlord: ${getLandlordNameFromPopulated(farmer["landlordId"])}",
+                          ),
                         ],
                       ),
                       trailing: Row(
@@ -300,11 +374,24 @@ class _FarmerScreenState extends State<FarmerScreen> {
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
+                              // Extract landlord ID for edit mode
+                              String? landlordId;
+                              if (farmer["landlordId"] is Map) {
+                                landlordId = farmer["landlordId"]["_id"];
+                              } else {
+                                landlordId = farmer["landlordId"];
+                              }
+
+                              print(
+                                "Edit button clicked - Landlord ID: $landlordId",
+                              );
+
                               showFarmerDialog(
                                 id: farmer["_id"],
                                 name: farmer["name"],
                                 phone: farmer["phone"],
                                 address: farmer["address"],
+                                existingLandlordId: landlordId,
                               );
                             },
                           ),
