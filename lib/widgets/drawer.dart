@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
 import 'package:mandimate_mobile_app/screens/farmer_screen.dart';
+import 'package:mandimate_mobile_app/screens/inventory_screen.dart';
 import 'package:mandimate_mobile_app/screens/landlord_screen.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
 import 'package:mandimate_mobile_app/screens/login_screen.dart';
@@ -88,7 +89,12 @@ class CustomDrawer extends StatelessWidget {
                       leading: const Icon(Icons.inventory_2), // Inventory icon
                       title: const Text("Inventory"),
                       onTap: () {
-                        // TODO: Navigate to Inventory Page
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InventoryScreen(),
+                          ),
+                        );
                       },
                     ),
                     ListTile(
