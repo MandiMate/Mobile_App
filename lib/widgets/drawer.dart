@@ -35,7 +35,7 @@ class CustomDrawer extends StatelessWidget {
                 children: [
                   SizedBox(
                     height: 40,
-                    child: Image.asset("assets/Group.png", fit: BoxFit.contain),
+                    child: Image.asset("assets/mlogo.png", fit: BoxFit.contain),
                   ),
                   const SizedBox(height: 10),
                   const Text(
@@ -74,7 +74,7 @@ class CustomDrawer extends StatelessWidget {
                     ),
                     ListTile(
                       leading: Icon(Icons.timeline, color: Colors.green[700]),
-                      title: const Text("Season Overview"),
+                      title: const Text("Season Purchases"),
                       onTap: () {
                         Navigator.push(
                           context,

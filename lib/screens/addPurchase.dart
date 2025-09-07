@@ -318,7 +318,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                     _numberField(
                       controller: unitPriceController,
                       label: 'Unit Price',
-                      prefixIcon: Icons.currency_rupee,
+                      prefixIcon: Icons.monetization_on,
                       validator: _requiredPositive,
                     ),
                   ),

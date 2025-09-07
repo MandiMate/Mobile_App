@@ -1057,7 +1057,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Season Overview',
+                'Season Purchases',
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
             ),

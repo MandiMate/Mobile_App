@@ -145,8 +145,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    Image.asset('assets/Group.png', height: 90),
-                    const SizedBox(height: 12),
+                    Image.asset('assets/mlogo.png', height: 70),
+                    const SizedBox(height: 15),
                     const Text(
                       'Welcome To MandiMate',
                       textAlign: TextAlign.center,

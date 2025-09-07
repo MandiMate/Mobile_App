@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
               // M Logo in Center
               Image.asset(
-                'assets/Group.png',
+                'assets/mlogo.png',
                 width: logoSize,
                 height: logoSize,
                 fit: BoxFit.contain,
