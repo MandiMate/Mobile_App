@@ -14,6 +14,7 @@ class LandlordPage extends StatefulWidget {
 class _LandlordPageState extends State<LandlordPage> {
   List landlords = [];
   bool isLoading = false;
+  final String baseUrl = 'https://mandimatebackend.vercel.app';
 
   @override
   void initState() {
@@ -34,11 +35,38 @@ class _LandlordPageState extends State<LandlordPage> {
             content: Text("Auth token missing. Please login again."),
           ),
         );
+        setState(() => isLoading = false);
         return;
       }
 
+      final response = await http.get(
+        Uri.parse('$baseUrl/landlord/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        setState(() {
+          landlords = jsonData['data'] ?? [];
+        });
+      } else {
+        debugPrint("Failed to fetch landlords: ${response.statusCode}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to fetch landlords: ${response.statusCode}"),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint("Error fetching landlords: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error occurred while fetching landlords"),
+        ),
+      );
     }
     setState(() => isLoading = false);
   }
@@ -58,8 +86,38 @@ class _LandlordPageState extends State<LandlordPage> {
         return;
       }
 
+      final response = await http.post(
+        Uri.parse('$baseUrl/landlord/create'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'name': name, 'phone': phone, 'address': address}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        Navigator.pop(context); // Close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jsonData['message'] ?? "Landlord added successfully"),
+          ),
+        );
+        fetchLandlords(); // Refresh list
+      } else {
+        debugPrint("Failed to add landlord: ${response.statusCode}");
+        debugPrint("Response body: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to add landlord: ${response.statusCode}"),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint("Error adding landlord: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error occurred while adding landlord")),
+      );
     }
   }
 
@@ -138,6 +196,10 @@ class _LandlordPageState extends State<LandlordPage> {
                       phoneController.text,
                       addressController.text,
                     );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Please fill all fields")),
+                    );
                   }
                 },
                 child: const Text("Add"),
@@ -202,6 +264,33 @@ class _LandlordPageState extends State<LandlordPage> {
         return;
       }
 
+      final response = await http.delete(
+        Uri.parse('$baseUrl/landlord/delete/$landlordId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              jsonData['message'] ?? "Landlord deleted successfully",
+            ),
+          ),
+        );
+        fetchLandlords(); // Refresh list to update UI
+      } else {
+        debugPrint("Failed to delete landlord: ${response.statusCode}");
+        debugPrint("Response body: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to delete landlord: ${response.statusCode}"),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint("Error deleting landlord: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -266,7 +355,7 @@ class _LandlordPageState extends State<LandlordPage> {
                           child: const Icon(Icons.person, color: Colors.black),
                         ),
                         title: Text(
-                          landlord["name"],
+                          landlord["name"] ?? "Unknown",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -275,8 +364,8 @@ class _LandlordPageState extends State<LandlordPage> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(landlord["phone"]),
-                            Text(landlord["address"]),
+                            Text(landlord["phone"] ?? "No phone"),
+                            Text(landlord["address"] ?? "No address"),
                           ],
                         ),
                         trailing: IconButton(
