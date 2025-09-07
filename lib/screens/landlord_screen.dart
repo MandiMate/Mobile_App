@@ -37,6 +37,24 @@ class _LandlordPageState extends State<LandlordPage> {
         return;
       }
 
+      final response = await http.get(
+        Uri.parse("https://mandimatebackend.vercel.app/landlord/"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          landlords = data["data"];
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load landlords: ${response.body}")),
+        );
+      }
     } catch (e) {
       debugPrint("Error fetching landlords: $e");
     }
@@ -57,7 +75,6 @@ class _LandlordPageState extends State<LandlordPage> {
         );
         return;
       }
-
     } catch (e) {
       debugPrint("Error adding landlord: $e");
     }
@@ -201,7 +218,6 @@ class _LandlordPageState extends State<LandlordPage> {
         );
         return;
       }
-
     } catch (e) {
       debugPrint("Error deleting landlord: $e");
       ScaffoldMessenger.of(context).showSnackBar(
