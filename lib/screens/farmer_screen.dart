@@ -350,21 +350,57 @@ class _FarmerScreenState extends State<FarmerScreen> {
                 itemCount: farmers.length,
                 itemBuilder: (context, index) {
                   final farmer = farmers[index];
+
+                  // Extract landlordId properly (map or string)
+                  String? landlordId;
+                  if (farmer["landlordId"] is Map) {
+                    landlordId = farmer["landlordId"]["_id"];
+                  } else {
+                    landlordId = farmer["landlordId"];
+                  }
+
                   return Card(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 3,
                     margin: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 8,
                     ),
                     child: ListTile(
-                      title: Text(farmer["name"]),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 16,
+                      ),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.green.shade100,
+                        child: Text(
+                          farmer["name"].toString().isNotEmpty
+                              ? farmer["name"][0].toUpperCase()
+                              : "?",
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        farmer["name"],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Phone: ${farmer["phone"]}"),
-                          Text("Address: ${farmer["address"]}"),
+                          Text("${farmer["phone"]}"),
+                          Text("${farmer["address"]}"),
                           Text(
                             "Landlord: ${getLandlordNameFromPopulated(farmer["landlordId"])}",
+                            style: const TextStyle(fontStyle: FontStyle.italic),
                           ),
                         ],
                       ),
@@ -374,18 +410,6 @@ class _FarmerScreenState extends State<FarmerScreen> {
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
-                              // Extract landlord ID for edit mode
-                              String? landlordId;
-                              if (farmer["landlordId"] is Map) {
-                                landlordId = farmer["landlordId"]["_id"];
-                              } else {
-                                landlordId = farmer["landlordId"];
-                              }
-
-                              print(
-                                "Edit button clicked - Landlord ID: $landlordId",
-                              );
-
                               showFarmerDialog(
                                 id: farmer["_id"],
                                 name: farmer["name"],
@@ -397,9 +421,7 @@ class _FarmerScreenState extends State<FarmerScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              deleteFarmer(farmer["_id"]);
-                            },
+                            onPressed: () => deleteFarmer(farmer["_id"]),
                           ),
                         ],
                       ),
@@ -407,6 +429,7 @@ class _FarmerScreenState extends State<FarmerScreen> {
                   );
                 },
               ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showFarmerDialog(),
         icon: const Icon(Icons.add, color: Colors.white),

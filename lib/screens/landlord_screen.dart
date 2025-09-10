@@ -129,83 +129,82 @@ class _LandlordPageState extends State<LandlordPage> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text("Add Landlord"),
-            content: SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: "Name",
-                      prefixIcon: const Icon(Icons.person),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: phoneController,
-                    decoration: InputDecoration(
-                      labelText: "Phone",
-                      prefixIcon: const Icon(Icons.phone),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: addressController,
-                    decoration: InputDecoration(
-                      labelText: "Address",
-                      prefixIcon: const Icon(Icons.home),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text("Add Landlord"),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: "Name",
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {
-                  if (nameController.text.isNotEmpty &&
-                      phoneController.text.isNotEmpty &&
-                      addressController.text.isNotEmpty) {
-                    addLandlord(
-                      nameController.text,
-                      phoneController.text,
-                      addressController.text,
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please fill all fields")),
-                    );
-                  }
-                },
-                child: const Text("Add"),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(
+                  labelText: "Phone",
+                  prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addressController,
+                decoration: InputDecoration(
+                  labelText: "Address",
+                  prefixIcon: const Icon(Icons.home),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              if (nameController.text.isNotEmpty &&
+                  phoneController.text.isNotEmpty &&
+                  addressController.text.isNotEmpty) {
+                addLandlord(
+                  nameController.text,
+                  phoneController.text,
+                  addressController.text,
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please fill all fields")),
+                );
+              }
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -213,39 +212,38 @@ class _LandlordPageState extends State<LandlordPage> {
   void confirmDelete(String landlordId) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text(
-              "Delete Landlord",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: const Text(
-              "Are you sure you want to delete this landlord? This action cannot be undone.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog before deleting
-                  deleteLandlord(landlordId);
-                },
-                child: const Text("Delete"),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          "Delete Landlord",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          "Are you sure you want to delete this landlord? This action cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog before deleting
+              deleteLandlord(landlordId);
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -325,62 +323,60 @@ class _LandlordPageState extends State<LandlordPage> {
 
       body: RefreshIndicator(
         onRefresh: fetchLandlords,
-        child:
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : landlords.isEmpty
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : landlords.isEmpty
                 ? const Center(child: Text("No landlords found."))
                 : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: landlords.length,
-                  itemBuilder: (context, index) {
-                    final landlord = landlords[index];
-                    return Card(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                      margin: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 4,
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: landlords.length,
+                    itemBuilder: (context, index) {
+                      final landlord = landlords[index];
+                      return Card(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(
                           vertical: 8,
-                          horizontal: 16,
+                          horizontal: 4,
                         ),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.green.shade100,
-                          child: const Icon(Icons.person, color: Colors.black),
-                        ),
-                        title: Text(
-                          landlord["name"] ?? "Unknown",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 16,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.green.shade100,
+                            child:
+                                const Icon(Icons.person, color: Colors.black),
+                          ),
+                          title: Text(
+                            landlord["name"] ?? "Unknown",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(landlord["phone"] ?? "No phone"),
+                              Text(landlord["address"] ?? "No address"),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => confirmDelete(
+                              landlord["_id"],
+                            ), // confirm dialog
                           ),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(landlord["phone"] ?? "No phone"),
-                            Text(landlord["address"] ?? "No address"),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed:
-                              () => confirmDelete(
-                                landlord["_id"],
-                              ), // confirm dialog
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: showAddLandlordDialog,
         label: const Text("Add Landlord"),
