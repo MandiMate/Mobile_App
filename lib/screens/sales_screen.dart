@@ -99,25 +99,58 @@ class _SalesPageState extends State<SalesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
+      // appBar: AppBar(
+      //   backgroundColor: Colors.white,
+      //   iconTheme: const IconThemeData(color: Colors.black),
+      //   elevation: 0,
+      //   title: Container(
+      //     height: 40,
+      //     decoration: BoxDecoration(
+      //       color: Colors.grey[200],
+      //       borderRadius: BorderRadius.circular(20),
+      //     ),
+      //     child: const TextField(
+      //       decoration: InputDecoration(
+      //         hintText: 'Search',
+      //         prefixIcon: Icon(Icons.search, color: Colors.grey),
+      //         border: InputBorder.none,
+      //       ),
+      //     ),
+      //   ),
+      // ),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
+        automaticallyImplyLeading: true,
         elevation: 0,
-        title: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const TextField(
-            decoration: InputDecoration(
-              hintText: 'Search',
-              prefixIcon: Icon(Icons.search, color: Colors.grey),
-              border: InputBorder.none,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)], // Green shades
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
+        title: const Text(
+          "Sales Overview",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 1.2,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              // Future: Add quick sale or go to report page
+            },
+            icon: const Icon(Icons.insert_chart, color: Colors.white),
+            tooltip: "Sales Report",
+          ),
+        ],
       ),
+
       drawer: const CustomDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
