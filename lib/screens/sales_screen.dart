@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -75,54 +71,6 @@ class _SalesPageState extends State<SalesPage> {
     setState(() {
       sales.removeAt(index);
     });
-  }
-
-  Future<void> downloadReceipt(Map<String, dynamic> sale) async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(24),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  "MandiMate Sales Receipt",
-                  style: pw.TextStyle(
-                    fontSize: 20,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 16),
-                pw.Text("Customer: ${sale['customer']}"),
-                pw.Text("Product: ${sale['product']}"),
-                pw.Text("Quantity: ${sale['quantity']} ${sale['unit']}"),
-                pw.Text("Unit Price: Rs ${sale['unitPrice']}"),
-                pw.Divider(),
-                pw.Text(
-                  "Total Amount: Rs ${sale['total']}",
-                  style: pw.TextStyle(
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File("${dir.path}/${sale['product']}_receipt.pdf");
-    await file.writeAsBytes(await pdf.save());
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Receipt saved: ${file.path}")));
   }
 
   Widget buildTextField({
@@ -326,7 +274,15 @@ class _SalesPageState extends State<SalesPage> {
                                     Icons.download,
                                     color: Colors.green,
                                   ),
-                                  onPressed: () => downloadReceipt(sale),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Download feature coming soon!",
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
