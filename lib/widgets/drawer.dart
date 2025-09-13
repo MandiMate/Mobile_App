@@ -3,6 +3,7 @@ import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
 import 'package:mandimate_mobile_app/screens/farmer_screen.dart';
 import 'package:mandimate_mobile_app/screens/inventory_screen.dart';
 import 'package:mandimate_mobile_app/screens/landlord_screen.dart';
+import 'package:mandimate_mobile_app/screens/sales_screen.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
 import 'package:mandimate_mobile_app/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,13 +87,27 @@ class CustomDrawer extends StatelessWidget {
                       },
                     ),
                     ListTile(
+                      leading: Icon(
+                        Icons.point_of_sale,
+                        color: Colors.green[700],
+                      ),
+                      title: Text("Sales"),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SalesPage()),
+                        );
+                      },
+                    ),
+
+                    ListTile(
                       leading: const Icon(Icons.inventory_2), // Inventory icon
                       title: const Text("Inventory"),
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const InventoryScreen(),
+                            builder: (context) => const InventoryPage(),
                           ),
                         );
                       },
