@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mandimate_mobile_app/screens/addPurchase.dart';
-import 'package:mandimate_mobile_app/screens/sales_screen.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

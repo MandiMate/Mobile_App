@@ -369,9 +369,6 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
       text: purchase['farmerId']?['name']?.toString() ?? '',
     );
 
-    // Use a Completer to properly handle the result
-    final Completer<bool> completer = Completer<bool>();
-
     // Change the return type to bool only
     final bool? dialogResult = await showGeneralDialog<bool>(
       context: context, // Use original context directly

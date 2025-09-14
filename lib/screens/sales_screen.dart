@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/widgets/SaleReceiptDialog.dart';
-import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 
@@ -654,6 +654,7 @@ class _SalesPageState extends State<SalesPage> {
                                 }
                               },
                               child: Card(
+                                color: Colors.white,
                                 elevation: 4,
                                 margin: const EdgeInsets.symmetric(vertical: 8),
                                 shape: RoundedRectangleBorder(
