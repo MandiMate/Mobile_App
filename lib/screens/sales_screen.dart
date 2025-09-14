@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/widgets/SaleReceiptDialog.dart';
@@ -13,68 +14,346 @@ class SalesPage extends StatefulWidget {
 }
 
 class _SalesPageState extends State<SalesPage> {
-  bool showForm = true;
+  bool showForm = false;
+  bool isLoading = true;
 
-  final TextEditingController productController = TextEditingController();
+  // Controllers
   final TextEditingController quantityController = TextEditingController();
-  final TextEditingController unitController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController customerController = TextEditingController();
+  final TextEditingController dateController = TextEditingController();
 
-  List<Map<String, dynamic>> sales = [];
+  // Form state
+  String? selectedProduct;
+  String? selectedUnit;
+  DateTime? selectedDate;
 
-  void addSale() {
-    final String product = productController.text.trim();
-    final int quantity = int.tryParse(quantityController.text) ?? 0;
-    final String unit = unitController.text.trim();
-    final int unitPrice = int.tryParse(priceController.text) ?? 0;
-    final String customer = customerController.text.trim();
+  // Data
+  List<dynamic> sales = [];
 
-    if (product.isEmpty || quantity <= 0 || unit.isEmpty || unitPrice <= 0) {
+  final List<String> productList = const [
+    'Tomato (Tamatar)',
+    'Onion (Pyaz)',
+    'Potato (Aloo)',
+    'Cabbage (Band Gobi)',
+    'Carrot (Gajar)',
+    'Peas (Matar)',
+    'Spinach (Palak)',
+    'Garlic (Lahsan)',
+    'Ginger (Adrak)',
+    'Cucumber (Kheera)',
+    'Chili (Mirch)',
+    'Brinjal (Baigan)',
+    'Cauliflower (Phool Gobi)',
+    'Okra (Bhindi)',
+    'Bitter Gourd (Karela)',
+    'Bottle Gourd (Lauki)',
+    'Ridge Gourd (Tori)',
+    'Pumpkin (Kaddu)',
+    'Radish (Mooli)',
+    'Turnip (Shaljam)',
+    'Beetroot (Chukandar)',
+    'Lady Finger',
+    'Capsicum (Shimla Mirch)',
+    'Lettuce (Salad Patta)',
+    'Mint (Pudina)',
+    'Coriander (Dhaniya)',
+    'Mustard Greens (Sarson ka Saag)',
+    'Leek (Gandana)',
+    'Spring Onion',
+    'Sweet Potato (Shakarkand)',
+    'Tinda',
+  ];
+
+  final List<String> unitList = const ["kg", "bag", "quintal", "ton"];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSales();
+  }
+
+  @override
+  void dispose() {
+    quantityController.dispose();
+    priceController.dispose();
+    customerController.dispose();
+    dateController.dispose();
+    super.dispose();
+  }
+
+  // --------------------------
+  // Network: Fetch sales
+  // --------------------------
+  Future<void> fetchSales() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final resp = await http.get(
+        Uri.parse("https://mandimatebackend.vercel.app/sale/active"),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (resp.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(resp.body);
+        setState(() {
+          sales = jsonData["data"] ?? [];
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+        debugPrint("fetchSales failed: ${resp.statusCode} ${resp.body}");
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Failed to fetch sales")));
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      debugPrint("fetchSales error: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error fetching sales")));
+    }
+  }
+
+  // --------------------------
+  // Network: Add sale
+  // --------------------------
+  Future<void> addSale() async {
+    // basic validation
+    if (selectedProduct == null ||
+        selectedUnit == null ||
+        quantityController.text.trim().isEmpty ||
+        priceController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all required fields")),
       );
       return;
     }
 
-    final int total = quantity * unitPrice;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      final seasonId = prefs.getString("seasonId");
 
-    setState(() {
-      sales.add({
-        "product": product,
-        "quantity": quantity,
-        "unit": unit,
-        "unitPrice": unitPrice,
-        "customer": customer,
-        "total": total,
+      if (token == null || seasonId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Missing token or seasonId")),
+        );
+        return;
+      }
+
+      final body = {
+        "productName": selectedProduct!,
+        "quantity": int.parse(quantityController.text.trim()),
+        "unit": selectedUnit!,
+        "unitPrice": int.parse(priceController.text.trim()),
+        "customerName": customerController.text.trim(),
+        "seasonId": seasonId,
+        // NOTE: dateController/selectedDate is NOT sent to backend per your request
+      };
+
+      final resp = await http.post(
+        Uri.parse("https://mandimatebackend.vercel.app/sale/add"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: json.encode(body),
+      );
+
+      if (resp.statusCode == 201 || resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Sale added successfully")),
+        );
+
+        // reset form and go back to list
+        setState(() {
+          showForm = false;
+          selectedProduct = null;
+          selectedUnit = null;
+          selectedDate = null;
+          dateController.clear();
+          quantityController.clear();
+          priceController.clear();
+          customerController.clear();
+        });
+
+        await fetchSales();
+      } else {
+        debugPrint("addSale failed: ${resp.statusCode} ${resp.body}");
+        String message = "Failed to add sale";
+        try {
+          final m = json.decode(resp.body);
+          if (m is Map && m["message"] != null) message = m["message"];
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("$message (${resp.statusCode})")),
+        );
+      }
+    } catch (e) {
+      debugPrint("addSale error: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error adding sale")));
+    }
+  }
+
+  // --------------------------
+  // Network: Delete sale
+  // --------------------------
+  Future<void> deleteSale(String saleId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) return;
+
+      final resp = await http.delete(
+        Uri.parse("https://mandimatebackend.vercel.app/sale/delete/$saleId"),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (resp.statusCode == 200 || resp.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Sale deleted successfully")),
+        );
+        await fetchSales();
+      } else {
+        debugPrint("deleteSale failed: ${resp.statusCode} ${resp.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to delete sale: ${resp.body}")),
+        );
+      }
+    } catch (e) {
+      debugPrint("deleteSale error: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error deleting sale")));
+    }
+  }
+
+  Future<void> fetchSingleSaleAndShowReceipt(String saleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final url = "https://mandimatebackend.vercel.app/sale/singleSale/$saleId";
+    final res = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token', // agar token required hai
+      },
+    );
+
+    if (res.statusCode == 200) {
+      final body = jsonDecode(res.body);
+
+      showDialog(
+        context: context,
+        builder:
+            (_) =>
+                SaleReceiptDialog(body: body), // 👈 yahan naya dialog use karo
+      );
+    } else {
+      // error handle
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error fetching sale receipt")));
+    }
+  }
+
+  // --------------------------
+  // Date picker (sets both DateTime and controller text)
+  // --------------------------
+  Future<void> pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+        // display in dd-MM-yyyy (UI only)
+        dateController.text =
+            "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
       });
-      showForm = false;
-
-      productController.clear();
-      quantityController.clear();
-      unitController.clear();
-      priceController.clear();
-      customerController.clear();
-    });
+    }
   }
 
-  void editSale(int index) {
-    final sale = sales[index];
-    productController.text = sale["product"];
-    quantityController.text = sale["quantity"].toString();
-    unitController.text = sale["unit"];
-    priceController.text = sale["unitPrice"].toString();
-    customerController.text = sale["customer"];
-    setState(() {
-      showForm = true;
-      sales.removeAt(index);
-    });
+  // --------------------------
+  // Helpers
+  // --------------------------
+  String formatApiDate(dynamic d) {
+    if (d == null) return '-';
+    try {
+      final s = d.toString();
+      if (s.contains('T')) return s.split('T')[0];
+      return s;
+    } catch (_) {
+      return d.toString();
+    }
   }
 
-  void deleteSale(int index) {
-    setState(() {
-      sales.removeAt(index);
-    });
+  int toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  // --------------------------
+  // UI helpers
+  // --------------------------
+  Widget buildDropdown({
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    String? selectedValue,
+    required Function(String?) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: selectedValue,
+        isExpanded: true, // 👈 force dropdown to take full width
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.green),
+          filled: true,
+          fillColor: Colors.green.shade50,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 10,
+          ),
+        ),
+        items:
+            items
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item,
+                    child: Text(
+                      item,
+                      maxLines: 1, // 👈 single line
+                      overflow:
+                          TextOverflow.ellipsis, // 👈 dots (...) lag jayenge
+                    ),
+                  ),
+                )
+                .toList(),
+        onChanged: onChanged,
+      ),
+    );
   }
 
   Widget buildTextField({
@@ -82,12 +361,16 @@ class _SalesPageState extends State<SalesPage> {
     required IconData icon,
     required TextEditingController controller,
     TextInputType keyboard = TextInputType.text,
+    bool readOnly = false,
+    void Function()? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
         controller: controller,
         keyboardType: keyboard,
+        readOnly: readOnly,
+        onTap: onTap,
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: Colors.green),
           labelText: label,
@@ -99,36 +382,21 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
+  // --------------------------
+  // Build
+  // --------------------------
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      // appBar: AppBar(
-      //   backgroundColor: Colors.white,
-      //   iconTheme: const IconThemeData(color: Colors.black),
-      //   elevation: 0,
-      //   title: Container(
-      //     height: 40,
-      //     decoration: BoxDecoration(
-      //       color: Colors.grey[200],
-      //       borderRadius: BorderRadius.circular(20),
-      //     ),
-      //     child: const TextField(
-      //       decoration: InputDecoration(
-      //         hintText: 'Search',
-      //         prefixIcon: Icon(Icons.search, color: Colors.grey),
-      //         border: InputBorder.none,
-      //       ),
-      //     ),
-      //   ),
-      // ),
       appBar: AppBar(
-        automaticallyImplyLeading: true,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)], // Green shades
+              colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -144,17 +412,7 @@ class _SalesPageState extends State<SalesPage> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Future: Add quick sale or go to report page
-            },
-            icon: const Icon(Icons.insert_chart, color: Colors.white),
-            tooltip: "Sales Report",
-          ),
-        ],
       ),
-
       drawer: const CustomDrawer(),
       body: SafeArea(
         child: Padding(
@@ -542,7 +800,7 @@ class _SalesPageState extends State<SalesPage> {
                       ),
                     ),
             ],
-          ],
+          ),
         ),
       ),
     );
