@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:mandimate_mobile_app/widgets/SaleReceiptDialog.dart';
+import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 
 class SalesPage extends StatefulWidget {
@@ -152,180 +156,391 @@ class _SalesPageState extends State<SalesPage> {
       ),
 
       drawer: const CustomDrawer(),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            if (showForm)
-              Card(
-                elevation: 6,
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      buildTextField(
-                        label: "Product Name",
-                        icon: Icons.shopping_bag,
-                        controller: productController,
-                      ),
-                      buildTextField(
-                        label: "Quantity",
-                        icon: Icons.format_list_numbered,
-                        controller: quantityController,
-                        keyboard: TextInputType.number,
-                      ),
-                      buildTextField(
-                        label: "Unit (kg, ton etc.)",
-                        icon: Icons.scale,
-                        controller: unitController,
-                      ),
-                      buildTextField(
-                        label: "Unit Price",
-                        icon: Icons.attach_money,
-                        controller: priceController,
-                        keyboard: TextInputType.number,
-                      ),
-                      buildTextField(
-                        label: "Customer Name",
-                        icon: Icons.person,
-                        controller: customerController,
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: addSale,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              // FORM
+              // FORM
+              if (showForm)
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Card(
+                        elevation: 6,
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Text(
-                          "Save Sale",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (!showForm) ...[
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    showForm = true;
-                  });
-                },
-                icon: const Icon(Icons.add),
-                label: const Text("Add Sale"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: sales.length,
-                  itemBuilder: (context, index) {
-                    final sale = sales[index];
-                    return Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  sale["product"],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                                Text(
-                                  "Rs ${sale['total']}",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text("Customer: ${sale['customer']}"),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Quantity: ${sale['quantity']} ${sale['unit']}",
-                                ),
-                                Text("Unit Price: Rs ${sale['unitPrice']}"),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => editSale(index),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => deleteSale(index),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.download,
-                                    color: Colors.green,
-                                  ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Download feature coming soon!",
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child:
+                              isWide
+                                  ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Col 1: Product, Unit
+                                      Flexible(
+                                        flex: 1,
+                                        child: Column(
+                                          children: [
+                                            buildDropdown(
+                                              label: "Product Name",
+                                              icon: Icons.shopping_bag,
+                                              items: productList,
+                                              selectedValue: selectedProduct,
+                                              onChanged:
+                                                  (val) => setState(
+                                                    () => selectedProduct = val,
+                                                  ),
+                                            ),
+                                            buildDropdown(
+                                              label: "Unit",
+                                              icon: Icons.scale,
+                                              items: unitList,
+                                              selectedValue: selectedUnit,
+                                              onChanged:
+                                                  (val) => setState(
+                                                    () => selectedUnit = val,
+                                                  ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
+
+                                      const SizedBox(width: 12),
+
+                                      // Col 2: Quantity, Unit Price
+                                      Flexible(
+                                        flex: 1,
+                                        child: Column(
+                                          children: [
+                                            buildTextField(
+                                              label: "Quantity",
+                                              icon: Icons.format_list_numbered,
+                                              controller: quantityController,
+                                              keyboard: TextInputType.number,
+                                            ),
+                                            buildTextField(
+                                              label: "Unit Price",
+                                              icon: Icons.attach_money,
+                                              controller: priceController,
+                                              keyboard: TextInputType.number,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 12),
+
+                                      // Col 3: Customer, Date (UI only)
+                                      Flexible(
+                                        flex: 1,
+                                        child: Column(
+                                          children: [
+                                            buildTextField(
+                                              label: "Customer Name",
+                                              icon: Icons.person,
+                                              controller: customerController,
+                                            ),
+                                            buildTextField(
+                                              label: "Date (Not Sent)",
+                                              icon: Icons.date_range,
+                                              controller: dateController,
+                                              readOnly: true,
+                                              onTap: pickDate,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                  : Column(
+                                    children: [
+                                      buildDropdown(
+                                        label: "Product Name",
+                                        icon: Icons.shopping_bag,
+                                        items: productList,
+                                        selectedValue: selectedProduct,
+                                        onChanged:
+                                            (val) => setState(
+                                              () => selectedProduct = val,
+                                            ),
+                                      ),
+                                      buildTextField(
+                                        label: "Quantity",
+                                        icon: Icons.format_list_numbered,
+                                        controller: quantityController,
+                                        keyboard: TextInputType.number,
+                                      ),
+                                      buildDropdown(
+                                        label: "Unit",
+                                        icon: Icons.scale,
+                                        items: unitList,
+                                        selectedValue: selectedUnit,
+                                        onChanged:
+                                            (val) => setState(
+                                              () => selectedUnit = val,
+                                            ),
+                                      ),
+                                      buildTextField(
+                                        label: "Unit Price",
+                                        icon: Icons.attach_money,
+                                        controller: priceController,
+                                        keyboard: TextInputType.number,
+                                      ),
+                                      buildTextField(
+                                        label: "Customer Name",
+                                        icon: Icons.person,
+                                        controller: customerController,
+                                      ),
+                                      buildTextField(
+                                        label: "Date (Not Sent)",
+                                        icon: Icons.date_range,
+                                        controller: dateController,
+                                        readOnly: true,
+                                        onTap: pickDate,
+                                      ),
+                                    ],
+                                  ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
+
+              // Save Button (only when form visible)
+              if (showForm) const SizedBox(height: 12),
+              if (showForm)
+                ElevatedButton(
+                  onPressed: addSale,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Save Sale",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+              // Add Sale button when list visible
+              // Add Sale button when list visible
+              if (!showForm) ...[
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.end, // 👈 Button right side par
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() => showForm = true);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Sale"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // SALES LIST
+              if (!showForm)
+                isLoading
+                    ? const Expanded(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                    : Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: fetchSales,
+                        child: ListView.builder(
+                          itemCount: sales.length,
+                          itemBuilder: (context, index) {
+                            final sale = sales[index];
+
+                            final total =
+                                toInt(sale['totalAmount']) != 0
+                                    ? toInt(sale['totalAmount'])
+                                    : (toInt(sale['quantity']) *
+                                        toInt(sale['unitPrice']));
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                final id = sale['_id']?.toString() ?? '';
+                                if (id.isNotEmpty) {
+                                  fetchSingleSaleAndShowReceipt(id);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Sale id missing"),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Card(
+                                elevation: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              sale['productName']?.toString() ??
+                                                  '-',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit,
+                                                  color: Colors.blue,
+                                                ),
+                                                onPressed: () {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        "Edit not implemented yet",
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                ),
+                                                onPressed: () async {
+                                                  final confirmed = await showDialog<
+                                                    bool
+                                                  >(
+                                                    context: context,
+                                                    builder:
+                                                        (ctx) => AlertDialog(
+                                                          title: const Text(
+                                                            "Confirm delete",
+                                                          ),
+                                                          content: const Text(
+                                                            "Are you sure you want to delete this sale?",
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed:
+                                                                  () =>
+                                                                      Navigator.pop(
+                                                                        ctx,
+                                                                        false,
+                                                                      ),
+                                                              child: const Text(
+                                                                "Cancel",
+                                                              ),
+                                                            ),
+                                                            TextButton(
+                                                              onPressed:
+                                                                  () =>
+                                                                      Navigator.pop(
+                                                                        ctx,
+                                                                        true,
+                                                                      ),
+                                                              child: const Text(
+                                                                "Delete",
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                  );
+                                                  if (confirmed == true) {
+                                                    final id =
+                                                        sale['_id']
+                                                            ?.toString() ??
+                                                        '';
+                                                    if (id.isNotEmpty)
+                                                      deleteSale(id);
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        "Rs ${total.toString()}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        "Customer: ${sale['customerName']?.toString() ?? '-'}",
+                                      ),
+                                      const Divider(),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            "Quantity: ${sale['quantity']?.toString() ?? '-'} ${sale['unit']?.toString() ?? '-'}",
+                                          ),
+                                          Text(
+                                            "Unit Price: Rs ${sale['unitPrice']?.toString() ?? '-'}",
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        "Date: ${formatApiDate(sale['saleDate']?.toString() ?? '')}",
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
             ],
           ],
         ),

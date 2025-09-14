@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:mandimate_mobile_app/screens/addPurchase.dart';
+import 'package:mandimate_mobile_app/screens/sales_screen.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -9,167 +14,263 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  List<Map<String, dynamic>> inventory = [
-    {
-      "productName": "Potato",
-      "quantity": 50,
-      "unit": "kg",
-      "purchasePrice": 2000,
-      "salePrice": 2500,
-      "lastUpdated": "12-09-2025",
-      "status": "In Stock",
-    },
-    {
-      "productName": "Onion",
-      "quantity": 10,
-      "unit": "kg",
-      "purchasePrice": 1000,
-      "salePrice": 1200,
-      "lastUpdated": "11-09-2025",
-      "status": "Low Stock",
-    },
-    {
-      "productName": "Tomato",
-      "quantity": 0,
-      "unit": "kg",
-      "purchasePrice": 1500,
-      "salePrice": 1800,
-      "lastUpdated": "10-09-2025",
-      "status": "Out of Stock",
-    },
-  ];
+  List inventory = [];
+  bool isLoading = false;
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case "In Stock":
-        return Colors.green;
-      case "Low Stock":
-        return Colors.orange;
-      case "Out of Stock":
-        return Colors.red;
-      default:
-        return Colors.grey;
+  Future<void> fetchInventory() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seasonId = prefs.getString("seasonId");
+      final token = prefs.getString("token");
+
+      if (seasonId == null || token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Season or token missing!")),
+        );
+        return;
+      }
+
+      final url =
+          "https://mandimatebackend.vercel.app/inventory?seasonId=$seasonId";
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          inventory = data["data"];
+        });
+      } else {
+        debugPrint("❌ Error: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("⚠️ Exception: $e");
     }
+    setState(() => isLoading = false);
   }
 
-  /// Demo refresh function (abhi sirf shuffle karega)
-  Future<void> _refreshInventory() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      inventory.shuffle(); // Future mein yahan API se data fetch hoga
-    });
+  Color _getStockColor(int qty) {
+    if (qty == 0) return Colors.red;
+    if (qty < 50) return Colors.orange;
+    return Colors.green;
+  }
+
+  String _getStockStatus(int qty) {
+    if (qty == 0) return "Out of Stock";
+    if (qty < 50) return "Low Stock";
+    return "In Stock";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchInventory();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("📦 Inventory"),
-        backgroundColor: Colors.green.shade700,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshInventory,
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black),
+        elevation: 0,
+        title: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
+          child: const TextField(
+            decoration: InputDecoration(
+              hintText: 'Search',
+              prefixIcon: Icon(Icons.search, color: Colors.grey),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        centerTitle: false,
       ),
       drawer: const CustomDrawer(),
+
       body: RefreshIndicator(
-        onRefresh: _refreshInventory,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: GridView.builder(
-            itemCount: inventory.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 2 cards per row
-              childAspectRatio: 0.7, // 👈 height ko thoda adjust kiya
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemBuilder: (context, index) {
-              final item = inventory[index];
-              return Card(
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        onRefresh: fetchInventory,
+        child:
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : inventory.isEmpty
+                ? const Center(child: Text("No inventory found"))
+                : Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row: Heading
+                      // Heading Row without buttons
+                      // Heading Row
+                      const SizedBox(height: 10),
+                      Row(
                         children: [
-                          Icon(
-                            Icons.shopping_basket,
-                            size: 40,
-                            color: Colors.green.shade700,
+                          const Icon(
+                            Icons.inventory_2,
+                            color: Colors.green,
+                            size: 28,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item["productName"],
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "📦 Quantity: ${item["quantity"]} ${item["unit"]}",
-                          ),
-                          Text("💰 Purchase: ${item["purchasePrice"]}"),
-                          Text("💵 Sale: ${item["salePrice"]}"),
-                          Text("📅 ${item["lastUpdated"]}"),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(
-                                item["status"],
-                              ).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _getStatusColor(item["status"]),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 10,
-                                  color: _getStatusColor(item["status"]),
-                                ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    item["status"],
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _getStatusColor(item["status"]),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(width: 8),
+                          const Text(
+                            "Inventory",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.green,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
+                      const SizedBox(height: 16),
+
+                      // Inventory Grid
+                      Expanded(
+                        child: GridView.builder(
+                          itemCount: inventory.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.8,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
+                          itemBuilder: (context, index) {
+                            final item = inventory[index];
+                            final currentQty = item["currentQty"] ?? 0;
+
+                            return Card(
+                              color: Colors.white,
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item["productName"],
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+
+                                    // Stock Badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 4,
+                                        horizontal: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStockColor(
+                                          currentQty,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: _getStockColor(currentQty),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _getStockStatus(currentQty),
+                                        style: TextStyle(
+                                          color: _getStockColor(currentQty),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Details
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Purchased:",
+                                          style: TextStyle(fontSize: 13),
+                                        ),
+                                        Text(
+                                          "${item["totalPurchasedQty"]} ${item["baseUnit"]}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Sold:",
+                                          style: TextStyle(fontSize: 13),
+                                        ),
+                                        Text(
+                                          "${item["totalSoldQty"]} ${item["baseUnit"]}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Available:",
+                                          style: TextStyle(fontSize: 13),
+                                        ),
+                                        Text(
+                                          "$currentQty ${item["baseUnit"]}",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: _getStockColor(currentQty),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const Spacer(),
+
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Text(
+                                        "Updated: ${item["updatedAt"].toString().substring(0, 10)}",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            },
-          ),
-        ),
       ),
     );
   }

@@ -76,7 +76,7 @@ class CustomDrawer extends StatelessWidget {
                     ),
                     ListTile(
                       leading: Icon(Icons.timeline, color: Colors.green[700]),
-                      title: const Text("Season Purchases"),
+                      title: const Text("Invoice"),
                       onTap: () {
                         Navigator.push(
                           context,
