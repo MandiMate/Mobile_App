@@ -74,7 +74,6 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   String? token;
 
   static const Color kPrimary = Color(0xFF2D6A4F);
-  static const Color kAccent = Color(0xFF95D5B2);
   static const Color kBg = Color(0xFFF8F9FA);
 
   @override
