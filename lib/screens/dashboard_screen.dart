@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mandimate_mobile_app/screens/addPurchase.dart';
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
 import 'package:mandimate_mobile_app/widgets/activeSeason.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
@@ -200,21 +199,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         seasonName: name,
         startDate: startDateFormatted,
         status: status,
-        onAddPurchase: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddPurchaseScreen()),
-          );
-        },
-        onViewLandlords: () {
-          // Navigator.of(context).pushNamed('/landlords');
-        },
-        onViewFarmers: () {
-          // Navigator.of(context).pushNamed('/farmers');
-        },
-        onViewReports: () {
-          // Navigator.of(context).pushNamed('/reports');
-        },
       );
     } else {
       // No active season -> show non-active widget

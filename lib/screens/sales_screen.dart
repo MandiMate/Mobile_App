@@ -505,7 +505,7 @@ class _SalesPageState extends State<SalesPage> {
                                               controller: customerController,
                                             ),
                                             buildTextField(
-                                              label: "Date (Not Sent)",
+                                              label: "Date",
                                               icon: Icons.date_range,
                                               controller: dateController,
                                               readOnly: true,
@@ -556,7 +556,7 @@ class _SalesPageState extends State<SalesPage> {
                                         controller: customerController,
                                       ),
                                       buildTextField(
-                                        label: "Date (Not Sent)",
+                                        label: "Date",
                                         icon: Icons.date_range,
                                         controller: dateController,
                                         readOnly: true,
