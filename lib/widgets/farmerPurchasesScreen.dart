@@ -192,7 +192,7 @@ class _FarmerPurchasesScreenState extends State<FarmerPurchasesScreen> {
                                     ),
                                   ),
                                   Text(
-                                    "Contact: ${farmerInfo!["landlordContact"] ?? "-"}",
+                                    "Contact: -",
                                     style: const TextStyle(
                                       fontSize: 15,
                                       color: Colors.grey,

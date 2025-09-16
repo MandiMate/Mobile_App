@@ -1017,6 +1017,11 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  String capitalize(String? text) {
+    if (text == null || text.isEmpty) return '—';
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
   // -------------------------------------------
   // UI Pieces
   // -------------------------------------------
@@ -1158,7 +1163,7 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _season?['name']?.toString() ?? '—',
+                        capitalize(_season?['name']?.toString()),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,

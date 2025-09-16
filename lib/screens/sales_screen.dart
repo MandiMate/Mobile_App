@@ -269,6 +269,11 @@ class _SalesPageState extends State<SalesPage> {
   }
 
   // --------------------------
+  // Update
+  // --------------------------
+
+
+  // --------------------------
   // Date picker (sets both DateTime and controller text)
   // --------------------------
   Future<void> pickDate() async {
@@ -391,28 +396,57 @@ class _SalesPageState extends State<SalesPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(110), // 👈 thoda zyada height
+        child: AppBar(
+          elevation: 6,
+          backgroundColor: const Color(0xFF2D6A4F),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2D6A4F), Color(0xFF40916C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
+              ),
+            ),
+          ),
+          centerTitle: true,
+          title: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Text(
+                "Sales Overview",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "Track & Analyze Your Sales",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
             ),
           ),
         ),
-        title: const Text(
-          "Sales Overview",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.2,
-          ),
-        ),
-        centerTitle: true,
       ),
+
       drawer: const CustomDrawer(),
       body: SafeArea(
         child: Padding(
@@ -576,7 +610,7 @@ class _SalesPageState extends State<SalesPage> {
                 ElevatedButton(
                   onPressed: addSale,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Color(0xFF2D6A4F),
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
@@ -603,7 +637,7 @@ class _SalesPageState extends State<SalesPage> {
                       icon: const Icon(Icons.add),
                       label: const Text("Add Sale"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: Color(0xFF2D6A4F),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,

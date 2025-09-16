@@ -181,7 +181,7 @@ class _LandlordPageState extends State<LandlordPage> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xFF2D6A4F),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -302,25 +302,57 @@ class _LandlordPageState extends State<LandlordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
-        title: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(110),
+        child: AppBar(
+          elevation: 6,
+          backgroundColor: const Color(0xFF2D6A4F),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2D6A4F), Color(0xFF40916C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
+              ),
+            ),
           ),
-          child: const TextField(
-            decoration: InputDecoration(
-              hintText: 'Search',
-              prefixIcon: Icon(Icons.search, color: Colors.grey),
-              border: InputBorder.none,
+          centerTitle: true,
+          title: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Text(
+                "Add Landlord",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "Register New Landlord Details",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
             ),
           ),
         ),
       ),
+
       drawer: const CustomDrawer(), // your drawer widget
 
       body: RefreshIndicator(
@@ -384,13 +416,10 @@ class _LandlordPageState extends State<LandlordPage> {
         onPressed: showAddLandlordDialog,
         label: const Text(
           "Add Landlord",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         icon: const Icon(Icons.add, color: Colors.white),
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF2D6A4F),
       ),
     );
   }
