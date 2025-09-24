@@ -136,11 +136,11 @@ class CustomDrawer extends StatelessWidget {
                         );
                       },
                     ),
-                    ListTile(
-                      leading: Icon(Icons.settings, color: Colors.green[700]),
-                      title: const Text("Setting"),
-                      onTap: () {},
-                    ),
+                    // ListTile(
+                    //   leading: Icon(Icons.settings, color: Colors.green[700]),
+                    //   title: const Text("Setting"),
+                    //   onTap: () {},
+                    // ),
                   ],
                 ),
               ),
