@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mandimate_mobile_app/screens/SeasonSummaryReport.dart';
 import 'package:mandimate_mobile_app/screens/addPurchase.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
@@ -148,7 +149,6 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
     );
 
     try {
-      // Get token and seasonId from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       final seasonId = prefs.getString('seasonId');
@@ -157,29 +157,27 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
       print('DEBUG: seasonId: $seasonId');
 
       if (token == null || token.isEmpty) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
         _showSnack('Auth token missing. Please login again.');
-        print('DEBUG: token missing -> return');
         return;
       }
 
       if (seasonId == null || seasonId.isEmpty) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
         _showSnack('Season ID not found. Please refresh and try again.');
-        print('DEBUG: seasonId missing -> return');
         return;
       }
 
-      // Make API call to close season
-      final uri = Uri.parse(
+      // 🔹 STEP 1: End Season API
+      final closeUri = Uri.parse(
         'https://mandimatebackend.vercel.app/season/close/$seasonId',
       );
 
-      print('DEBUG: Making PATCH request to: $uri');
+      print('DEBUG: Making PATCH request to: $closeUri');
 
-      final response = await http
+      final closeResponse = await http
           .patch(
-            uri,
+            closeUri,
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
@@ -187,50 +185,70 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
           )
           .timeout(const Duration(seconds: 20));
 
-      print('DEBUG: Response status: ${response.statusCode}');
-      print('DEBUG: Response body: ${response.body}');
+      print('DEBUG: Close Season Response: ${closeResponse.statusCode}');
+      print('DEBUG: Close Season Body: ${closeResponse.body}');
 
-      // Close loading dialog
-      Navigator.of(context).pop();
+      if (closeResponse.statusCode != 200 && closeResponse.statusCode != 201) {
+        Navigator.of(context).pop();
+        _showSnack('Failed to end season (${closeResponse.statusCode})');
+        return;
+      }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('DEBUG: Season ended successfully');
+      // 🔹 STEP 2: Generate Report API
+      final reportUri = Uri.parse(
+        'https://mandimatebackend.vercel.app/seasonReport/generate/$seasonId',
+      );
 
-        // Show success message
-        _showSnack('Season ended successfully!');
+      print('DEBUG: Making POST request to: $reportUri');
 
-        // Clear seasonId from SharedPreferences
+      final reportResponse = await http.post(
+        reportUri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('DEBUG: Report Generation Response: ${reportResponse.statusCode}');
+      print('DEBUG: Report Generation Body: ${reportResponse.body}');
+
+      Navigator.of(context).pop(); // close loading dialog
+
+      if (reportResponse.statusCode == 200 ||
+          reportResponse.statusCode == 201) {
+        final responseData = json.decode(reportResponse.body);
+
+        _showSnack(responseData['message'] ?? 'Report generated successfully!');
+
+        // ✅ Clear seasonId after closing season
         await prefs.remove('seasonId');
 
-        // Call bootstrap to refresh the app state
-        print('DEBUG: Calling _bootstrap() to refresh app state');
-        await _bootstrap();
-
-        print('DEBUG: _endSeason completed successfully');
+        // ✅ Navigate to SeasonSummaryReportPage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SeasonSummaryReportPage(),
+          ),
+        );
       } else {
-        // Handle error response
-        String errorMessage = 'Failed to end season (${response.statusCode})';
+        String errorMessage =
+            'Failed to generate report (${reportResponse.statusCode})';
 
         try {
-          final errorData = json.decode(response.body);
+          final errorData = json.decode(reportResponse.body);
           if (errorData is Map && errorData['message'] != null) {
             errorMessage = errorData['message'].toString();
           }
-        } catch (_) {
-          // Use default error message if JSON parsing fails
-        }
+        } catch (_) {}
 
         _showSnack(errorMessage);
-        print('DEBUG: End season failed: $errorMessage');
       }
     } on TimeoutException {
-      Navigator.of(context).pop(); // Close loading dialog
+      Navigator.of(context).pop();
       _showSnack('Request timed out. Please try again.');
-      print('DEBUG: End season timeout');
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading dialog
+      Navigator.of(context).pop();
       _showSnack('Network error: $e');
-      print('DEBUG: End season network error: $e');
     }
   }
 

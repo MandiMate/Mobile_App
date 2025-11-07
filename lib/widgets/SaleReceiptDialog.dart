@@ -102,9 +102,7 @@ class SaleReceiptDialog extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => SalesPage(),
-                        ),
+                        MaterialPageRoute(builder: (context) => SalesPage()),
                       );
                     },
                     icon: const Icon(

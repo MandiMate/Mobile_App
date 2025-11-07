@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mandimate_mobile_app/screens/SeasonSummaryReport.dart';
 import 'package:mandimate_mobile_app/screens/dashboard_screen.dart';
 import 'package:mandimate_mobile_app/screens/farmer_screen.dart';
 import 'package:mandimate_mobile_app/screens/inventory_screen.dart';
@@ -136,6 +137,24 @@ class CustomDrawer extends StatelessWidget {
                         );
                       },
                     ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.assessment,
+                      ),
+                      title: const Text("Summary Report"),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    const SeasonSummaryReportPage(),
+                          ),
+                        );
+                      },
+                    ),
+
                     // ListTile(
                     //   leading: Icon(Icons.settings, color: Colors.green[700]),
                     //   title: const Text("Setting"),
