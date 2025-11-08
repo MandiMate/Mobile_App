@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/screens/SeasonSummaryReport.dart';
 import 'package:mandimate_mobile_app/screens/addPurchase.dart';
+import 'package:mandimate_mobile_app/widgets/custom_header.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 import 'package:mandimate_mobile_app/widgets/receipt_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1045,25 +1046,35 @@ class _SeasonOverviewScreenState extends State<SeasonOverviewScreen> {
   // -------------------------------------------
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
+    return
+    // AppBar(
+    //   backgroundColor: Colors.white,
+    //   iconTheme: const IconThemeData(color: Colors.black),
+    //   elevation: 0,
+    //   title: Container(
+    //     height: 40,
+    //     decoration: BoxDecoration(
+    //       color: Colors.grey[200],
+    //       borderRadius: BorderRadius.circular(20),
+    //     ),
+    //     child: const TextField(
+    //       decoration: InputDecoration(
+    //         hintText: 'Search',
+    //         prefixIcon: Icon(Icons.search, color: Colors.grey),
+    //         border: InputBorder.none,
+    //       ),
+    //     ),
+    //   ),
+    //   centerTitle: false,
+    // );
+    AppBar(
       backgroundColor: Colors.white,
       iconTheme: const IconThemeData(color: Colors.black),
       elevation: 0,
-      title: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const TextField(
-          decoration: InputDecoration(
-            hintText: 'Search',
-            prefixIcon: Icon(Icons.search, color: Colors.grey),
-            border: InputBorder.none,
-          ),
-        ),
+      title: const CustomHeader(
+        title: "Season Invoice",
+        subtitle: "Review your seasonal records 🌾",
       ),
-      centerTitle: false,
     );
   }
 

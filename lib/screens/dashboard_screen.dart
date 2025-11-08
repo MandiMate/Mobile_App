@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mandimate_mobile_app/screens/seasonOverview_screen.dart';
 import 'package:mandimate_mobile_app/widgets/activeSeason.dart';
+import 'package:mandimate_mobile_app/widgets/custom_header.dart';
 import 'package:mandimate_mobile_app/widgets/drawer.dart';
 import 'package:mandimate_mobile_app/widgets/nonActiveSeason.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -223,25 +224,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Wrap in RefreshIndicator so user can pull to re-check
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+
       appBar: AppBar(
         backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
         elevation: 0,
-        title: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const TextField(
-            decoration: InputDecoration(
-              hintText: 'Search',
-              prefixIcon: Icon(Icons.search, color: Colors.grey),
-              border: InputBorder.none,
-            ),
-          ),
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: const CustomHeader(
+          title: "Dashboard",
+          subtitle: "Let’s make progress today 🌿",
         ),
       ),
+
       drawer: const CustomDrawer(),
       body: RefreshIndicator(
         onRefresh: refreshActiveSeason,
